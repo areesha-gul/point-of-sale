@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Use environment variable for API URL, fallback to /api for local development
+const baseURL = import.meta.env.VITE_API_URL || '/api';
+
 const api = axios.create({
-    baseURL: '/api',
+    baseURL,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json'
@@ -11,9 +14,9 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
     config => {
-        // Ensure baseURL is always set
-        if (!config.url.startsWith('/api') && !config.url.startsWith('http')) {
-            config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
+        // Ensure proper URL formatting
+        if (!config.url.startsWith('http') && !config.url.startsWith(baseURL)) {
+            config.url = `${baseURL}${config.url.startsWith('/') ? '' : '/'}${config.url}`;
         }
         return config;
     },
