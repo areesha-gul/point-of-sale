@@ -1,7 +1,14 @@
 import axios from 'axios';
 
-// Use environment variable for API URL, fallback to /api for local development
-const baseURL = import.meta.env.VITE_API_URL || '/api';
+// Use environment variable for API URL
+// In production (Vercel), this MUST be set to your Render backend URL
+const baseURL = import.meta.env.VITE_API_URL;
+
+if (!baseURL) {
+    console.error('VITE_API_URL is not set! API calls will fail.');
+}
+
+console.log('API Base URL:', baseURL);
 
 const api = axios.create({
     baseURL,
@@ -14,10 +21,6 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
     config => {
-        // Ensure proper URL formatting
-        if (!config.url.startsWith('http') && !config.url.startsWith(baseURL)) {
-            config.url = `${baseURL}${config.url.startsWith('/') ? '' : '/'}${config.url}`;
-        }
         return config;
     },
     error => Promise.reject(error)
