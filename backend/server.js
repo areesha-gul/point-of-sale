@@ -9,10 +9,32 @@ const { initDatabase } = require('./database/connection');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// CORS Configuration
+const allowedOrigins = [
+    'http://localhost:5173',  // Local development
+    'http://localhost:5174',  // Alternative local port
+    process.env.FRONTEND_URL  // Production Vercel URL
+].filter(Boolean); // Remove undefined values
+
+console.log('Allowed CORS origins:', allowedOrigins);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'https://point-of-sale-frontend-three.vercel.app'],
-    credentials: true
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin is in allowed list or matches Vercel preview deployments
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('.vercel.app')) {
+            callback(null, true);
+        } else {
+            console.warn(`CORS blocked origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,6 +47,7 @@ app.use(session({
     cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 30 * 60 * 1000 // 30 minutes
     }
 }));
