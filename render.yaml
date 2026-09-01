@@ -18,7 +18,3 @@ services:
         value: https://your-frontend-url.vercel.app
       - key: NODE_VERSION
         value: 20.18.1
-    disk:
-      name: pos-data
-      mountPath: /opt/render/project/src/backend/database
-      sizeGB: 1
