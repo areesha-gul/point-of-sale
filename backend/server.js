@@ -57,6 +57,23 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root route
+app.get('/', (req, res) => {
+    res.json({ 
+        message: 'Point of Sale API Server',
+        status: 'running',
+        endpoints: {
+            health: '/health',
+            auth: '/api/auth',
+            products: '/api/products',
+            customers: '/api/customers',
+            vendors: '/api/vendors',
+            sales: '/api/sales',
+            purchases: '/api/purchases'
+        }
+    });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);
@@ -73,7 +90,7 @@ async function startServer() {
         await initDatabase();
         console.log('Database initialized successfully');
         
-        app.listen(PORT, () => {
+        app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server running on port ${PORT}`);
             console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
         });
