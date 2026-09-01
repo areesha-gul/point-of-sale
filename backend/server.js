@@ -90,7 +90,7 @@ async function startServer() {
         await initDatabase();
         console.log('Database initialized successfully');
         
-        app.listen(PORT, '0.0.0.0', () => {
+        app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
             console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
         });
