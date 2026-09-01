@@ -8,10 +8,13 @@
     "dev": "nodemon server.js",
     "init-db": "node database/init.js"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "express-session": "^1.17.3",
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^11.0.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

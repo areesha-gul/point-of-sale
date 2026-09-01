@@ -1,7 +1,7 @@
 services:
   - type: web
     name: pos-backend
-    env: node
+    runtime: node
     region: oregon
     plan: free
     buildCommand: cd backend && npm install && npm run init-db
@@ -16,6 +16,8 @@ services:
         value: /opt/render/project/src/backend/database/pos.db
       - key: FRONTEND_URL
         value: https://your-frontend-url.vercel.app
+      - key: NODE_VERSION
+        value: 20.18.1
     disk:
       name: pos-data
       mountPath: /opt/render/project/src/backend/database
