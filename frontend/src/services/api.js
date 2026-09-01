@@ -10,7 +10,13 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(
-    config => config,
+    config => {
+        // Ensure baseURL is always set
+        if (!config.url.startsWith('/api') && !config.url.startsWith('http')) {
+            config.url = `/api${config.url.startsWith('/') ? '' : '/'}${config.url}`;
+        }
+        return config;
+    },
     error => Promise.reject(error)
 );
 
