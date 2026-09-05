@@ -1,9 +1,11 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'pos.db');
+const schemaPath = path.join(__dirname, 'schema.sql');
 
 let db = null;
 
@@ -24,6 +26,21 @@ async function initDatabase() {
         db.pragma('foreign_keys = ON');
         db.pragma('journal_mode = WAL');
         db.pragma('synchronous = NORMAL');
+
+        db.exec(fs.readFileSync(schemaPath, 'utf8'));
+        db.prepare(`
+            INSERT OR IGNORE INTO cash_bank_accounts
+                (account_id, name, type, opening_balance, current_balance)
+            VALUES (?, ?, ?, ?, ?)
+        `).run('ACC-00001', 'Cash in Hand', 'cash', 0, 0);
+        db.prepare(`
+            INSERT OR IGNORE INTO cash_bank_accounts
+                (account_id, name, type, opening_balance, current_balance)
+            VALUES (?, ?, ?, ?, ?)
+        `).run('ACC-00002', 'Main Bank Account', 'bank', 0, 0);
+        db.prepare(
+            'INSERT OR IGNORE INTO users (username, password_hash, role) VALUES (?, ?, ?)'
+        ).run('admin', bcrypt.hashSync('admin123', 10), 'owner');
         
         console.log(`Database initialized at: ${dbPath}`);
     }
