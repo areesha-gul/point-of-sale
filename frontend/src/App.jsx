@@ -26,10 +26,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TEMPORARILY DISABLED - skip session check
-    setLoading(false);
-    setUser(null);
-    // checkSession();
+    checkSession();
   }, []);
 
   const checkSession = async () => {
@@ -60,9 +57,12 @@ function App() {
   const handleLogout = async () => {
     try {
       await auth.logout();
+      localStorage.removeItem('token');
       setUser(null);
     } catch (error) {
       console.error('Logout failed:', error);
+      localStorage.removeItem('token');
+      setUser(null);
     }
   };
 

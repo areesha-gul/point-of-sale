@@ -8,9 +8,6 @@
     "dev": "nodemon server.js",
     "init-db": "node database/init.js"
   },
-  "engines": {
-    "node": "20.x"
-  },
   "dependencies": {
     "express": "^4.18.2",
     "express-session": "^1.17.3",
@@ -18,6 +15,7 @@
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.2",
     "pdfkit": "^0.13.0",
     "exceljs": "^4.4.0"
   },

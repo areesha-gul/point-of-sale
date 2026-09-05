@@ -1,8 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { getDatabase } = require('../database/connection');
 
 const router = express.Router();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Login
 router.post('/login', (req, res) => {
@@ -25,14 +28,20 @@ router.post('/login', (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        req.session.userId = user.id;
-        req.session.username = user.username;
-        req.session.role = user.role;
+        // Create JWT token
+        const token = jwt.sign(
+            { id: user.id, username: user.username, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
 
         res.json({
-            id: user.id,
-            username: user.username,
-            role: user.role
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                role: user.role
+            }
         });
     } catch (error) {
         console.error('Login error:', error);
@@ -40,26 +49,28 @@ router.post('/login', (req, res) => {
     }
 });
 
-// Logout
+// Logout (client-side only with JWT)
 router.post('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.status(500).json({ error: 'Logout failed' });
-        }
-        res.json({ message: 'Logged out successfully' });
-    });
+    res.json({ message: 'Logged out successfully' });
 });
 
-// Check session
+// Check session/token
 router.get('/session', (req, res) => {
-    if (req.session.userId) {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
         res.json({
-            id: req.session.userId,
-            username: req.session.username,
-            role: req.session.role
+            id: decoded.id,
+            username: decoded.username,
+            role: decoded.role
         });
-    } else {
-        res.status(401).json({ error: 'Not authenticated' });
+    } catch (error) {
+        res.status(401).json({ error: 'Invalid token' });
     }
 });
 
