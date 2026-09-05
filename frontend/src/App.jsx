@@ -31,9 +31,19 @@ function App() {
 
   const checkSession = async () => {
     try {
-      const response = await auth.getSession();
+      // Add a timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Session check timeout')), 10000)
+      );
+      
+      const response = await Promise.race([
+        auth.getSession(),
+        timeoutPromise
+      ]);
+      
       setUser(response.data);
     } catch (error) {
+      console.error('Session check failed:', error.message);
       setUser(null);
     } finally {
       setLoading(false);
