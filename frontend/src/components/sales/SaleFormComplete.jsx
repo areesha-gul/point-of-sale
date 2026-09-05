@@ -226,7 +226,7 @@ export default function SaleFormComplete() {
 
                     {/* Price per KG */}
                     <div>
-                        <label className="label">Price per KG (₹) *</label>
+                        <label className="label">Price per KG (₨) *</label>
                         <input
                             type="number"
                             step="0.01"
@@ -267,7 +267,7 @@ export default function SaleFormComplete() {
 
                     {/* Amount Received */}
                     <div>
-                        <label className="label">Amount Received Now (₹)</label>
+                        <label className="label">Amount Received Now (₨)</label>
                         <input
                             type="number"
                             step="0.01"

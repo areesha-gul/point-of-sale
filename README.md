@@ -23,7 +23,7 @@ The most important business requirement - record when a customer pays a vendor d
 ### ✅ User Experience
 - **Simple Interface**: One clean screen per task
 - **Touch-Friendly**: Large buttons (44x44px minimum) for tablets
-- **Indian Number Format**: Amounts displayed in lakh/crore style (₹1,00,00,000)
+- **Pakistani Rupee**: Amounts displayed in lakh/crore style (₨1,00,00,000)
 - **Bilingual**: English and Urdu language toggle
 - **Responsive**: Works on desktop (1366x768+) and tablets (1024x768+)
 
@@ -115,10 +115,10 @@ Open `http://localhost:5173` in your browser and login with:
 6. Submit
 
 **Example**:
-- Customer A owes you ₹1,00,00,000
-- You owe Vendor B ₹70,00,000
-- Customer A pays Vendor B ₹70,00,000 directly
-- Result: Customer A owes ₹30,00,000, Vendor B owed ₹0
+- Customer A owes you ₨1,00,00,000
+- You owe Vendor B ₨70,00,000
+- Customer A pays Vendor B ₨70,00,000 directly
+- Result: Customer A owes ₨30,00,000, Vendor B owed ₨0
 
 ### Regular Payment
 - **From Customer**: Click "Payments" → "Payment Received" → Select customer, enter amount, select cash/bank
@@ -233,9 +233,9 @@ Toggle between English and Urdu using the language selector in the header.
 ## 🔢 Number Formatting
 
 All currency amounts displayed in Indian numbering format:
-- ₹1,00,00,000 (1 crore)
-- ₹70,00,000 (70 lakh)
-- ₹50,000 (50 thousand)
+- ₨1,00,00,000 (1 crore)
+- ₨70,00,000 (70 lakh)
+- ₨50,000 (50 thousand)
 
 ## 🛠️ Development
 

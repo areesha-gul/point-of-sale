@@ -226,7 +226,7 @@ export default function DirectSettlement() {
 
                 {/* Amount */}
                 <div>
-                    <label className="label">{t('amount')} (₹) *</label>
+                    <label className="label">{t('amount')} (₨) *</label>
                     <input
                         type="number"
                         step="0.01"
@@ -320,12 +320,12 @@ export default function DirectSettlement() {
                 <h3 className="text-xl font-bold mb-3">How Direct Settlement Works</h3>
                 <div className="space-y-2 text-gray-700">
                     <p><strong>Example:</strong></p>
-                    <p>1. Customer A owes you ₹1,00,00,000 (receivable)</p>
-                    <p>2. You owe Vendor B ₹70,00,000 (payable)</p>
-                    <p>3. Customer A pays Vendor B ₹70,00,000 directly</p>
+                    <p>1. Customer A owes you ₨1,00,00,000 (receivable)</p>
+                    <p>2. You owe Vendor B ₨70,00,000 (payable)</p>
+                    <p>3. Customer A pays Vendor B ₨70,00,000 directly</p>
                     <p><strong>Result:</strong></p>
-                    <p>• Customer A now owes you ₹30,00,000</p>
-                    <p>• You now owe Vendor B ₹0</p>
+                    <p>• Customer A now owes you ₨30,00,000</p>
+                    <p>• You now owe Vendor B ₨0</p>
                     <p>• Your cash/bank balances remain unchanged</p>
                 </div>
             </div>

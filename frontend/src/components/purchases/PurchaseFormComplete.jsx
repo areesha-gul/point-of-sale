@@ -234,7 +234,7 @@ export default function PurchaseFormComplete() {
 
                     {/* Rate per KG */}
                     <div>
-                        <label className="label">Rate per KG (₹) *</label>
+                        <label className="label">Rate per KG (₨) *</label>
                         <input
                             type="number"
                             step="0.01"
@@ -261,7 +261,7 @@ export default function PurchaseFormComplete() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Freight Charges */}
                     <div>
-                        <label className="label">Freight Charges (₹)</label>
+                        <label className="label">Freight Charges (₨)</label>
                         <input
                             type="number"
                             step="0.01"
@@ -274,7 +274,7 @@ export default function PurchaseFormComplete() {
 
                     {/* Other Charges */}
                     <div>
-                        <label className="label">Other Charges (₹)</label>
+                        <label className="label">Other Charges (₨)</label>
                         <input
                             type="number"
                             step="0.01"
@@ -331,7 +331,7 @@ export default function PurchaseFormComplete() {
 
                     {/* Amount Paid */}
                     <div>
-                        <label className="label">Amount Paid Now (₹)</label>
+                        <label className="label">Amount Paid Now (₨)</label>
                         <input
                             type="number"
                             step="0.01"

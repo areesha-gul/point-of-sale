@@ -1,5 +1,37 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import {
+    ArrowLeftRight,
+    BarChart3,
+    CreditCard,
+    FileClock,
+    FileChartColumn,
+    Home,
+    Languages,
+    LogOut,
+    Package,
+    ShoppingCart,
+    Truck,
+    UserRound,
+    Users
+} from 'lucide-react';
+
+const primaryLinks = [
+    { to: '/', label: 'Home', icon: Home, exact: true },
+    { to: '/sales/new', label: 'New Sale', icon: ShoppingCart },
+    { to: '/purchases/new', label: 'New Purchase', icon: Truck },
+    { to: '/payments/new', label: 'Record Payment', icon: CreditCard },
+    { to: '/settlements/new', label: 'Direct Payment', icon: ArrowLeftRight }
+];
+
+const additionalLinks = [
+    { to: '/sales/list', label: 'Sales History', icon: FileClock },
+    { to: '/purchases/list', label: 'Purchase History', icon: FileClock },
+    { to: '/customers', label: 'Customers', icon: Users },
+    { to: '/vendors', label: 'Vendors', icon: UserRound },
+    { to: '/products', label: 'Products', icon: Package },
+    { to: '/reports/outstanding', label: 'Reports', icon: BarChart3 }
+];
 
 export default function Layout({ user, onLogout }) {
     const { t, i18n } = useTranslation();
@@ -14,97 +46,73 @@ export default function Layout({ user, onLogout }) {
         return location.pathname === path || location.pathname.startsWith(path + '/');
     };
 
+    const renderLink = ({ to, label, icon: Icon, exact, compact = false }) => {
+        const active = exact ? location.pathname === to : isActive(to);
+        return (
+            <Link
+                key={to}
+                to={to}
+                className={`sidebar-link ${active ? 'sidebar-link-active' : ''} ${compact ? 'sidebar-link-compact' : ''}`}
+            >
+                <Icon size={compact ? 21 : 24} strokeWidth={2.2} aria-hidden="true" />
+                <span>{label}</span>
+            </Link>
+        );
+    };
+
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-blue-600 text-white shadow-lg">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex justify-between items-center">
-                        <Link to="/" className="text-2xl font-bold">
-                            {t('appName')}
-                        </Link>
-                        <div className="flex items-center gap-4">
-                            <span className="text-lg">{user.username}</span>
-                            <button
-                                onClick={toggleLanguage}
-                                className="btn-secondary text-sm"
-                            >
-                                {i18n.language === 'en' ? 'اردو' : 'English'}
-                            </button>
-                            <button onClick={onLogout} className="btn-danger">
-                                {t('logout')}
-                            </button>
-                        </div>
+        <div className="min-h-screen bg-gray-50 md:flex">
+            <aside className="sidebar-shell">
+                <div className="sidebar-brand">
+                    <Link to="/" className="flex items-center gap-3">
+                        <span className="brand-mark"><BarChart3 size={26} /></span>
+                        <span>{t('appName')}</span>
+                    </Link>
+                </div>
+
+                <div className="sidebar-user">
+                    <span className="user-avatar"><UserRound size={21} /></span>
+                    <div>
+                        <p className="text-sm text-blue-100">Signed in as</p>
+                        <p className="font-bold">{user.username}</p>
                     </div>
                 </div>
-            </header>
 
-            {/* Navigation */}
-            <nav className="bg-white shadow-md">
-                <div className="container mx-auto px-4">
-                    <div className="flex overflow-x-auto gap-2 py-3">
-                        <Link
-                            to="/"
-                            className={`btn ${isActive('/') && location.pathname === '/' ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('dashboard')}
-                        </Link>
-                        <Link
-                            to="/sales/list"
-                            className={`btn ${isActive('/sales') ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('sales')}
-                        </Link>
-                        <Link
-                            to="/purchases/list"
-                            className={`btn ${isActive('/purchases') ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('purchases')}
-                        </Link>
-                        <Link
-                            to="/payments/new"
-                            className={`btn ${isActive('/payments') ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('payments')}
-                        </Link>
-                        <Link
-                            to="/settlements/new"
-                            className={`btn ${isActive('/settlements') ? 'btn-success' : 'btn-secondary'}`}
-                        >
-                            {t('directSettlement')}
-                        </Link>
-                        <Link
-                            to="/customers"
-                            className={`btn ${isActive('/customers') ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('customers')}
-                        </Link>
-                        <Link
-                            to="/vendors"
-                            className={`btn ${isActive('/vendors') ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('vendors')}
-                        </Link>
-                        <Link
-                            to="/products"
-                            className={`btn ${isActive('/products') ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('products')}
-                        </Link>
-                        <Link
-                            to="/reports/outstanding"
-                            className={`btn ${isActive('/reports') ? 'btn-primary' : 'btn-secondary'}`}
-                        >
-                            {t('reports')}
-                        </Link>
-                    </div>
+                <nav className="sidebar-nav" aria-label="Main navigation">
+                    <p className="sidebar-heading">Daily work</p>
+                    {primaryLinks.map((link) => renderLink(link))}
+                    <p className="sidebar-heading mt-6">Records</p>
+                    {additionalLinks.map((link) => renderLink({ ...link, compact: true }))}
+                </nav>
+
+                <div className="sidebar-footer">
+                    <button onClick={toggleLanguage} className="sidebar-action">
+                        <Languages size={21} />
+                        <span>{i18n.language === 'en' ? 'اردو' : 'English'}</span>
+                    </button>
+                    <button onClick={onLogout} className="sidebar-action sidebar-logout">
+                        <LogOut size={21} />
+                        <span>{t('logout')}</span>
+                    </button>
                 </div>
-            </nav>
+            </aside>
 
-            {/* Main Content */}
-            <main className="container mx-auto px-4 py-8">
-                <Outlet />
-            </main>
+            <div className="min-w-0 flex-1">
+                <header className="mobile-header">
+                    <Link to="/" className="font-bold text-xl">{t('appName')}</Link>
+                    <div className="flex gap-2">
+                        <button onClick={toggleLanguage} className="mobile-icon-button" aria-label="Change language">
+                            <Languages size={22} />
+                        </button>
+                        <button onClick={onLogout} className="mobile-icon-button" aria-label={t('logout')}>
+                            <LogOut size={22} />
+                        </button>
+                    </div>
+                </header>
+                <main className="container mx-auto px-4 py-6 md:px-8 md:py-8">
+                    <Outlet />
+                </main>
+            </div>
         </div>
     );
 }

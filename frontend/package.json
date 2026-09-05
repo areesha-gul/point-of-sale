@@ -9,12 +9,13 @@
     "vercel-build": "vite build"
   },
   "dependencies": {
+    "axios": "^1.6.5",
+    "i18next": "^23.7.16",
+    "lucide-react": "^1.41.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.21.1",
-    "axios": "^1.6.5",
     "react-i18next": "^14.0.0",
-    "i18next": "^23.7.16"
+    "react-router-dom": "^6.21.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.48",

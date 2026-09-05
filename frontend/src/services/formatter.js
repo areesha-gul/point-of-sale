@@ -1,13 +1,13 @@
 /**
  * Format number in Indian numbering system (Lakh/Crore)
  * Examples:
- * 10000000 → ₹1,00,00,000.00 (1 crore)
- * 7000000 → ₹70,00,000.00 (70 lakh)
- * 50000 → ₹50,000.00
+ * 10000000 → ₨1,00,00,000.00 (1 crore)
+ * 7000000 → ₨70,00,000.00 (70 lakh)
+ * 50000 → ₨50,000.00
  */
 export function formatIndianCurrency(num) {
     if (num === null || num === undefined || isNaN(num)) {
-        return '₹0.00';
+        return '₨0.00';
     }
 
     const parts = Math.abs(num).toFixed(2).split('.');
@@ -30,7 +30,7 @@ export function formatIndianCurrency(num) {
     }
 
     const sign = num < 0 ? '-' : '';
-    return `${sign}₹${result}.${decimalPart}`;
+    return `${sign}₨${result}.${decimalPart}`;
 }
 
 /**
@@ -42,7 +42,7 @@ export function formatIndianNumber(num) {
     }
 
     const formatted = formatIndianCurrency(num);
-    return formatted.replace('₹', '').replace('-₹', '-');
+    return formatted.replace('₨', '').replace('-₨', '-');
 }
 
 /**
@@ -78,6 +78,6 @@ export function getTodayDate() {
 export function parseIndianNumber(str) {
     if (!str) return 0;
     // Remove currency symbol and commas
-    const cleaned = str.toString().replace(/[₹,]/g, '');
+    const cleaned = str.toString().replace(/[₨,]/g, '');
     return parseFloat(cleaned) || 0;
 }

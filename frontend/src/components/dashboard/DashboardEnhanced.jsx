@@ -119,6 +119,11 @@ export default function DashboardEnhanced() {
                 </div>
             </div>
 
+            <details className="border-t border-gray-200 pt-6">
+                <summary className="cursor-pointer text-xl font-bold text-blue-700">
+                    More business details
+                </summary>
+                <div className="mt-6 space-y-8">
             {/* Balance Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="card bg-green-50 border-2 border-green-200">
@@ -304,6 +309,8 @@ export default function DashboardEnhanced() {
                     </div>
                 </div>
             </div>
+                </div>
+            </details>
         </div>
     );
 }
