@@ -26,7 +26,10 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkSession();
+    // TEMPORARILY DISABLED - skip session check
+    setLoading(false);
+    setUser(null);
+    // checkSession();
   }, []);
 
   const checkSession = async () => {
