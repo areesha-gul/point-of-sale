@@ -31,19 +31,18 @@ function App() {
 
   const checkSession = async () => {
     try {
-      // Add a timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Session check timeout')), 10000)
-      );
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       
-      const response = await Promise.race([
-        auth.getSession(),
-        timeoutPromise
-      ]);
-      
+      const response = await auth.getSession();
       setUser(response.data);
     } catch (error) {
       console.error('Session check failed:', error.message);
+      localStorage.removeItem('token');
       setUser(null);
     } finally {
       setLoading(false);
