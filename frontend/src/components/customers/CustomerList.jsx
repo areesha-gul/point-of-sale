@@ -6,6 +6,9 @@ import { formatIndianCurrency } from '../../services/formatter';
 export default function CustomerList() {
     const [customerList, setCustomerList] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [formData, setFormData] = useState({ name: '', phone: '', address: '' });
+    const [error, setError] = useState('');
 
     useEffect(() => {
         loadCustomers();
@@ -22,11 +25,37 @@ export default function CustomerList() {
         }
     };
 
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        setError('');
+        try {
+            await customers.create(formData);
+            setFormData({ name: '', phone: '', address: '' });
+            setShowForm(false);
+            await loadCustomers();
+        } catch (err) {
+            setError(err.response?.data?.error || 'Could not add customer');
+        }
+    };
+
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
 
     return (
-        <div>
-            <h1 className="text-3xl font-bold mb-6">Customers</h1>
+        <div className="page-shell">
+            <div className="page-heading">
+                <div><h1 className="page-title">Customers</h1><p className="page-help">People who buy from you</p></div>
+                <button className="btn-primary" onClick={() => setShowForm(!showForm)}>+ Add Customer</button>
+            </div>
+            {showForm && <form onSubmit={handleSubmit} className="card form-card mb-6">
+                <h2 className="form-section-title">New customer</h2>
+                <div className="form-grid form-grid-3">
+                    <input className="input" placeholder="Customer name *" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required autoFocus />
+                    <input className="input" placeholder="Phone number" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                    <input className="input" placeholder="Address (optional)" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+                </div>
+                {error && <p className="form-error">{error}</p>}
+                <div className="form-actions"><button className="btn-success" type="submit">Save Customer</button><button className="btn-secondary" type="button" onClick={() => setShowForm(false)}>Cancel</button></div>
+            </form>}
             <div className="card">
                 <table className="w-full">
                     <thead>

@@ -133,10 +133,10 @@ export default function SaleFormComplete() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto">
+        <div className="page-shell">
             <div className="mb-6">
-                <h1 className="text-3xl font-bold mb-2">Record Sale</h1>
-                <p className="text-gray-600">Sale ID will be auto-generated (SAL-00001 format)</p>
+            <h1 className="page-title">New Sale</h1>
+            <p className="page-help">Choose the customer, product, quantity, and price.</p>
             </div>
 
             {error && (
@@ -151,8 +151,8 @@ export default function SaleFormComplete() {
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="card space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="card form-card space-y-4">
+                <div className="form-grid grid-cols-1 md:grid-cols-2">
                     {/* Customer Selection */}
                     <div>
                         <label className="label">Select Customer *</label>
@@ -170,7 +170,7 @@ export default function SaleFormComplete() {
                             ))}
                         </select>
                         {selectedCustomer && (
-                            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                            <div className="mt-2 rounded-lg bg-green-50 px-3 py-2">
                                 <p className="font-bold text-green-700">Previous Due:</p>
                                 <p className="text-2xl font-bold text-green-800">
                                     {formatIndianCurrency(selectedCustomer.current_balance)}
@@ -203,7 +203,7 @@ export default function SaleFormComplete() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="form-grid grid-cols-1 md:grid-cols-3">
                     {/* Quantity */}
                     <div>
                         <label className="label">Quantity (KG) *</label>
@@ -250,7 +250,9 @@ export default function SaleFormComplete() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <details className="rounded-lg border border-gray-200 p-4">
+                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Payment details</summary>
+                <div className="form-grid mt-4 grid-cols-1 md:grid-cols-3">
                     {/* Payment Method */}
                     <div>
                         <label className="label">Payment Method</label>
@@ -291,6 +293,7 @@ export default function SaleFormComplete() {
                         />
                     </div>
                 </div>
+                </details>
 
                 {/* Remaining Receivable */}
                 <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
@@ -300,17 +303,10 @@ export default function SaleFormComplete() {
                     </p>
                 </div>
 
-                {/* Notes */}
-                <div>
-                    <label className="label">Notes</label>
-                    <textarea
-                        className="input"
-                        rows="3"
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        placeholder="Additional notes about this sale..."
-                    />
-                </div>
+                <details className="rounded-lg border border-gray-200 p-4">
+                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Optional note</summary>
+                    <textarea className="input mt-4" rows="2" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Add a note if needed" />
+                </details>
 
                 {/* Buttons */}
                 <div className="flex gap-4">
@@ -330,11 +326,6 @@ export default function SaleFormComplete() {
                     </button>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-600">
-                    <p><strong>Note:</strong> This sale will be saved as DRAFT.</p>
-                    <p>You need to approve it from the sales list to finalize the transaction.</p>
-                    <p>Only after approval will stock be deducted and customer balance increased.</p>
-                </div>
             </form>
         </div>
     );

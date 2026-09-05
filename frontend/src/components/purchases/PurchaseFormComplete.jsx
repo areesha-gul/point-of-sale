@@ -152,10 +152,10 @@ export default function PurchaseFormComplete() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto">
+        <div className="page-shell">
             <div className="mb-6">
-                <h1 className="text-3xl font-bold mb-2">Record Purchase</h1>
-                <p className="text-gray-600">Purchase ID will be auto-generated (PUR-00001 format)</p>
+            <h1 className="page-title">New Purchase</h1>
+            <p className="page-help">Choose the vendor, product, quantity, and price.</p>
             </div>
 
             {error && (
@@ -170,8 +170,8 @@ export default function PurchaseFormComplete() {
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="card space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="card form-card space-y-4">
+                <div className="form-grid grid-cols-1 md:grid-cols-2">
                     {/* Vendor Selection */}
                     <div>
                         <label className="label">Select Vendor *</label>
@@ -217,7 +217,7 @@ export default function PurchaseFormComplete() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="form-grid grid-cols-1 md:grid-cols-3">
                     {/* Quantity */}
                     <div>
                         <label className="label">Quantity (KG) *</label>
@@ -258,7 +258,9 @@ export default function PurchaseFormComplete() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <details className="rounded-lg border border-gray-200 p-4">
+                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Optional charges</summary>
+                <div className="form-grid mt-4 grid-cols-1 md:grid-cols-2">
                     {/* Freight Charges */}
                     <div>
                         <label className="label">Freight Charges (₨)</label>
@@ -285,6 +287,7 @@ export default function PurchaseFormComplete() {
                         />
                     </div>
                 </div>
+                </details>
 
                 {/* Grand Total */}
                 <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
@@ -294,7 +297,9 @@ export default function PurchaseFormComplete() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <details className="rounded-lg border border-gray-200 p-4">
+                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Payment details</summary>
+                <div className="form-grid mt-4 grid-cols-1 md:grid-cols-3">
                     {/* Payment Method */}
                     <div>
                         <label className="label">Payment Method</label>
@@ -343,6 +348,7 @@ export default function PurchaseFormComplete() {
                         />
                     </div>
                 </div>
+                </details>
 
                 {/* Remaining Payable */}
                 <div className="bg-yellow-50 border-2 border-yellow-300 p-4 rounded-lg">
@@ -352,7 +358,9 @@ export default function PurchaseFormComplete() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <details className="rounded-lg border border-gray-200 p-4">
+                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Date and delivery</summary>
+                <div className="form-grid mt-4 grid-cols-1 md:grid-cols-2">
                     {/* Date */}
                     <div>
                         <label className="label">Purchase Date *</label>
@@ -381,18 +389,12 @@ export default function PurchaseFormComplete() {
                         </label>
                     </div>
                 </div>
+                </details>
 
-                {/* Notes */}
-                <div>
-                    <label className="label">Notes</label>
-                    <textarea
-                        className="input"
-                        rows="3"
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        placeholder="Additional notes about this purchase..."
-                    />
-                </div>
+                <details className="rounded-lg border border-gray-200 p-4">
+                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Optional note</summary>
+                    <textarea className="input mt-4" rows="2" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Add a note if needed" />
+                </details>
 
                 {/* Buttons */}
                 <div className="flex gap-4">
@@ -412,11 +414,6 @@ export default function PurchaseFormComplete() {
                     </button>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-600">
-                    <p><strong>Note:</strong> This purchase will be saved as DRAFT.</p>
-                    <p>You need to approve it from the purchases list to finalize the transaction.</p>
-                    <p>Only after approval will stock be updated and vendor balance increased.</p>
-                </div>
             </form>
         </div>
     );
