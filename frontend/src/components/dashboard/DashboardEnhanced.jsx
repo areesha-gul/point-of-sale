@@ -9,6 +9,7 @@ export default function DashboardEnhanced() {
     const [data, setData] = useState(null);
     const [kpis, setKpis] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         loadDashboard();
@@ -25,6 +26,7 @@ export default function DashboardEnhanced() {
             setKpis(kpiRes);
         } catch (error) {
             console.error('Error loading dashboard:', error);
+            setError('Could not load the dashboard. Please refresh and try again.');
         } finally {
             setLoading(false);
         }
@@ -35,7 +37,7 @@ export default function DashboardEnhanced() {
     }
 
     if (!data) {
-        return <div className="text-center text-2xl text-red-600">Failed to load dashboard</div>;
+        return <div className="card mx-auto max-w-xl text-center text-red-600"><p className="text-xl">{error || 'Failed to load dashboard'}</p><button className="btn-primary mt-4" onClick={() => window.location.reload()}>Try Again</button></div>;
     }
 
     const { summary, recentTransactions, topCustomers, topVendors, lowStockProducts } = data;

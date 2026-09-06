@@ -6,7 +6,7 @@ export default function ProductList() {
     const [productList, setProductList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ name: '', unit: 'KG', current_stock: '0', avg_cost: '0' });
+    const [formData, setFormData] = useState({ name: '' });
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -29,11 +29,12 @@ export default function ProductList() {
         setError('');
         try {
             await products.create({
-                ...formData,
-                current_stock: Number(formData.current_stock) || 0,
-                avg_cost: Number(formData.avg_cost) || 0
+                name: formData.name,
+                unit: 'KG',
+                current_stock: 0,
+                avg_cost: 0
             });
-            setFormData({ name: '', unit: 'KG', current_stock: '0', avg_cost: '0' });
+            setFormData({ name: '' });
             setShowForm(false);
             setLoading(true);
             await loadProducts();
@@ -58,11 +59,9 @@ export default function ProductList() {
             </div>
             {showForm && <form onSubmit={handleSubmit} className="card form-card mb-6">
                 <h2 className="form-section-title">New product</h2>
-                <div className="form-grid grid-cols-1 md:grid-cols-4">
+                <div className="form-grid grid-cols-1 md:grid-cols-2">
                     <input className="input" placeholder="Product name *" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required autoFocus />
-                    <select className="input select-input" value={formData.unit} onChange={e => setFormData({ ...formData, unit: e.target.value })}><option value="KG">KG</option><option value="Bag">Bag</option><option value="Ton">Ton</option></select>
-                    <input className="input" type="number" min="0" step="0.01" placeholder="Starting stock" value={formData.current_stock} onChange={e => setFormData({ ...formData, current_stock: e.target.value })} />
-                    <input className="input" type="number" min="0" step="0.01" placeholder="Average cost (₨)" value={formData.avg_cost} onChange={e => setFormData({ ...formData, avg_cost: e.target.value })} />
+                    <p className="flex items-center text-gray-600">Stock and price are added when you record a purchase.</p>
                 </div>
                 {error && <p className="form-error">{error}</p>}
                 <div className="form-actions"><button className="btn-success" type="submit">Save Product</button><button className="btn-secondary" type="button" onClick={() => setShowForm(false)}>Cancel</button></div>

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Use environment variable for API URL
 // In production (Vercel), this MUST be set to your Render backend URL
-const baseURL = import.meta.env.VITE_API_URL;
+const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 if (!baseURL) {
     console.error('VITE_API_URL is not set! API calls will fail.');
@@ -12,6 +12,7 @@ console.log('API Base URL:', baseURL);
 
 const api = axios.create({
     baseURL,
+    timeout: 15000,
     headers: {
         'Content-Type': 'application/json'
     }
