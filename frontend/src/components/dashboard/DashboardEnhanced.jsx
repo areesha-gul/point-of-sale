@@ -79,12 +79,12 @@ export default function DashboardEnhanced() {
                 </div>
 
                 <div className="card bg-green-50 border-2 border-green-200">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1">Total Profit (MTD)</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">Profit This Month</h3>
                     <p className="text-3xl font-bold text-green-700">
                         {formatIndianCurrency(kpis?.totalProfit || 0)}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                        Gross profit
+                        Sales minus product cost
                     </p>
                 </div>
 

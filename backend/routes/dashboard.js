@@ -142,7 +142,7 @@ router.get('/kpis', async (req, res) => {
             WHERE s.date >= $1 AND s.status = 'approved'
         `, [firstDayOfMonth])).rows[0];
 
-        const totalProfit = mtdProfit.revenue - mtdProfit.cogs;
+        const totalProfit = Number(mtdProfit.revenue) - Number(mtdProfit.cogs);
 
         // Pending approvals
         const pendingPurchases = (await query(`SELECT COUNT(*) as count FROM purchases WHERE status = 'draft'`)).rows[0].count;
@@ -150,9 +150,9 @@ router.get('/kpis', async (req, res) => {
         const pendingPayments = (await query(`SELECT COUNT(*) as count FROM payments WHERE status = 'draft'`)).rows[0].count;
 
         res.json({
-            todaySale: todaySale.total,
-            todaySaleCount: todaySale.count,
-            mtdSale: mtdSale.total,
+            todaySale: Number(todaySale.total),
+            todaySaleCount: Number(todaySale.count),
+            mtdSale: Number(mtdSale.total),
             totalProfit,
             pendingPurchases,
             pendingSales,
