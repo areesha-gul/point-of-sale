@@ -75,7 +75,7 @@ export const customers = {
 
 // Vendors
 export const vendors = {
-    getAll: () => api.get('/vendors'),
+    getAll: () => api.get('/vendors', { params: { refresh: Date.now() } }),
     getById: (id) => api.get(`/vendors/${id}`),
     create: (data) => api.post('/vendors', data),
     update: (id, data) => api.put(`/vendors/${id}`, data),

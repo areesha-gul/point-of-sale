@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { purchases, vendors, products, bankAccounts } from '../../services/api';
 import { formatIndianCurrency, getTodayDate } from '../../services/formatter';
@@ -42,6 +43,9 @@ export default function PurchaseFormComplete() {
 
     useEffect(() => {
         loadData();
+        const refreshOnFocus = () => loadData();
+        window.addEventListener('focus', refreshOnFocus);
+        return () => window.removeEventListener('focus', refreshOnFocus);
     }, []);
 
     useEffect(() => {
@@ -189,7 +193,13 @@ export default function PurchaseFormComplete() {
                 <div className="form-grid grid-cols-1 md:grid-cols-2">
                     {/* Vendor Selection */}
                     <div>
-                        <label className="label">Select Vendor *</label>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                            <label className="label mb-0">Select Vendor *</label>
+                            <div className="flex gap-2">
+                                <button type="button" className="text-sm font-semibold text-blue-700 hover:underline" onClick={loadData}>Refresh</button>
+                                <Link to="/vendors" className="text-sm font-semibold text-blue-700 hover:underline">Add vendor</Link>
+                            </div>
+                        </div>
                         <select
                             className="input select-input"
                             value={formData.vendor_id}
