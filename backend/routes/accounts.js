@@ -93,6 +93,24 @@ router.get('/:id/transactions', async (req, res) => {
             });
         });
 
+        // Get profit withdrawals
+        const profitWithdrawalsResult = await query(`
+            SELECT pw.id, pw.date, pw.amount, pw.recipient, pw.notes, 'profit_withdrawal' as type
+            FROM profit_withdrawals pw
+            WHERE pw.method = $1
+                AND (pw.method = 'cash' OR pw.bank_account_id = $2)
+            ORDER BY pw.date
+        `, [account.type, account.id]);
+        const profitWithdrawals = profitWithdrawalsResult.rows;
+
+        profitWithdrawals.forEach(withdrawal => {
+            transactions.push({
+                ...withdrawal,
+                direction: 'out',
+                description: withdrawal.notes || `Profit withdrawal - ${withdrawal.recipient}`
+            });
+        });
+
         // Sort by date and calculate running balance
         transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
         
