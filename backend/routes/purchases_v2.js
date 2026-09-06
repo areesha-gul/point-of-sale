@@ -57,7 +57,7 @@ router.post('/:id/approve', async (req, res) => {
         if (!purchase) return res.status(404).json({ error: 'Purchase not found or already approved' });
         await withTransaction(async (client) => {
             await client.query(`UPDATE purchases SET status = 'approved', approved_at = CURRENT_TIMESTAMP, approved_by = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [req.user?.id || null, req.params.id]);
-            await AccountingService.updateProductAfterPurchase(purchase.product_id, purchase.qty_kg, purchase.rate, client);
+            await AccountingService.updateProductAfterPurchase(purchase.product_id, purchase.qty_kg, Number(purchase.grand_total) / Number(purchase.qty_kg), client);
             const unpaid = Number(purchase.grand_total) - Number(purchase.amount_paid);
             if (unpaid > 0) await AccountingService.updateVendorBalance(purchase.vendor_id, unpaid, 'add', client);
             if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'subtract', client);

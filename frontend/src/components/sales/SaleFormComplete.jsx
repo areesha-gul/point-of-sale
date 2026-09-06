@@ -20,6 +20,7 @@ export default function SaleFormComplete() {
         product_id: '',
         qty_kg: '',
         rate: '',
+        freight_charges: '0',
         amount_paid: '0',
         payment_method: 'none',
         date: getTodayDate(),
@@ -39,7 +40,7 @@ export default function SaleFormComplete() {
 
     useEffect(() => {
         calculateTotals();
-    }, [formData.qty_kg, formData.rate, formData.amount_paid]);
+    }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.amount_paid]);
 
     const loadData = async () => {
         try {
@@ -60,9 +61,10 @@ export default function SaleFormComplete() {
     const calculateTotals = () => {
         const qty = parseFloat(formData.qty_kg) || 0;
         const rate = parseFloat(formData.rate) || 0;
+        const freight = parseFloat(formData.freight_charges) || 0;
         const paid = parseFloat(formData.amount_paid) || 0;
 
-        const total = qty * rate;
+        const total = qty * rate + freight;
         const remaining_receivable = total - paid;
 
         setCalculatedTotals({ total, remaining_receivable });
@@ -95,6 +97,7 @@ export default function SaleFormComplete() {
                 product_id: parseInt(formData.product_id),
                 qty_kg: parseFloat(formData.qty_kg),
                 rate: parseFloat(formData.rate),
+                freight_charges: parseFloat(formData.freight_charges) || 0,
                 amount_paid: parseFloat(formData.amount_paid),
                 payment_method: formData.payment_method,
                 date: formData.date,
@@ -111,6 +114,7 @@ export default function SaleFormComplete() {
                 product_id: '',
                 qty_kg: '',
                 rate: '',
+                freight_charges: '0',
                 amount_paid: '0',
                 payment_method: 'none',
                 date: getTodayDate(),
@@ -203,7 +207,7 @@ export default function SaleFormComplete() {
                     </div>
                 </div>
 
-                <div className="form-grid grid-cols-1 md:grid-cols-3">
+                <div className="form-grid grid-cols-1 md:grid-cols-4">
                     {/* Quantity */}
                     <div>
                         <label className="label">Quantity (KG) *</label>
@@ -235,6 +239,18 @@ export default function SaleFormComplete() {
                             value={formData.rate}
                             onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
                             required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="label">Freight (₨)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="input"
+                            value={formData.freight_charges}
+                            onChange={(e) => setFormData({ ...formData, freight_charges: e.target.value })}
                         />
                     </div>
 

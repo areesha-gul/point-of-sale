@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS sales (
     qty_kg NUMERIC(15, 3) NOT NULL,
     rate NUMERIC(15, 2) NOT NULL,
     total NUMERIC(15, 2) NOT NULL,
+    freight_charges NUMERIC(15, 2) DEFAULT 0,
     amount_paid NUMERIC(15, 2) DEFAULT 0,
     payment_method TEXT CHECK(payment_method IN ('cash', 'bank', 'none')),
     date DATE NOT NULL,

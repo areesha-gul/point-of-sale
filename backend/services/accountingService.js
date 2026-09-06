@@ -47,17 +47,18 @@ class AccountingService {
      */
     static async recordPurchase(purchaseData, purchaseId, client = null) {
         const db = client || { query };
-        const { vendor_id, total, amount_paid, payment_method, date } = purchaseData;
+        const { vendor_id, grand_total, total, amount_paid, payment_method, date } = purchaseData;
+        const purchaseTotal = Number(grand_total ?? total);
 
         const insertLedger = (values) => db.query(
             'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', values
         );
 
         // Dr. Stock (at purchase cost)
-        await insertLedger(['purchase', purchaseId, null, null, 'stock', total, 0, date]);
+        await insertLedger(['purchase', purchaseId, null, null, 'stock', purchaseTotal, 0, date]);
 
         // Cr. Vendor Payable (unpaid amount)
-        const unpaidAmount = total - amount_paid;
+        const unpaidAmount = purchaseTotal - Number(amount_paid);
         if (unpaidAmount > 0) {
             await insertLedger(['purchase', purchaseId, 'vendor', vendor_id, 'payable', 0, unpaidAmount, date]);
         }
