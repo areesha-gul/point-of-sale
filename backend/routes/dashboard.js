@@ -147,7 +147,7 @@ router.get('/kpis', async (req, res) => {
 
         const totalProfit = Number(mtdRevenue.revenue) - Number(mtdCost.cost);
         const profitSplit = {
-            istekhar: totalProfit * 2 / 5,
+            iftekhar_ahmad: totalProfit * 2 / 5,
             shaukat: totalProfit * 2 / 5,
             bank: totalProfit / 5
         };
@@ -163,19 +163,19 @@ router.get('/kpis', async (req, res) => {
         `, [firstDayOfMonth])).rows;
 
         const withdrawalsByRecipient = {
-            istekhar: 0,
+            iftekhar_ahmad: 0,
             shaukat: 0,
             bank: 0
         };
 
         withdrawals.forEach(w => {
-            const key = w.recipient.toLowerCase();
+            const key = w.recipient.toLowerCase().replace(/ /g, '_');
             withdrawalsByRecipient[key] = Number(w.total_withdrawn);
         });
 
         // Calculate remaining amounts
         const profitRemaining = {
-            istekhar: profitSplit.istekhar - withdrawalsByRecipient.istekhar,
+            iftekhar_ahmad: profitSplit.iftekhar_ahmad - withdrawalsByRecipient.iftekhar_ahmad,
             shaukat: profitSplit.shaukat - withdrawalsByRecipient.shaukat,
             bank: profitSplit.bank - withdrawalsByRecipient.bank
         };
