@@ -226,7 +226,13 @@ export default function PurchaseFormComplete() {
 
                     {/* Product Selection */}
                     <div>
-                        <label className="label">Select Product *</label>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                            <label className="label mb-0">Select Product *</label>
+                            <div className="flex gap-2">
+                                <button type="button" className="text-sm font-semibold text-blue-700 hover:underline" onClick={loadData}>Refresh</button>
+                                <Link to="/products" className="text-sm font-semibold text-blue-700 hover:underline">Add product</Link>
+                            </div>
+                        </div>
                         <select
                             className="input select-input"
                             value={formData.product_id}

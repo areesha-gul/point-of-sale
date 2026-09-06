@@ -55,7 +55,7 @@ export const auth = {
 
 // Products
 export const products = {
-    getAll: () => api.get('/products'),
+    getAll: () => api.get('/products', { params: { refresh: Date.now() } }),
     getById: (id) => api.get(`/products/${id}`),
     create: (data) => api.post('/products', data),
     update: (id, data) => api.put(`/products/${id}`, data),
