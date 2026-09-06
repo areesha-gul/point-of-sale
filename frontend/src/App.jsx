@@ -20,6 +20,7 @@ import DirectSettlement from './components/payments/DirectSettlement';
 import SalesReport from './components/reports/SalesReport';
 import PurchaseReport from './components/reports/PurchaseReport';
 import OutstandingReport from './components/reports/OutstandingReport';
+import BankAccountList from './components/accounts/BankAccountList';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -94,6 +95,7 @@ function App() {
         >
           <Route index element={<DashboardEnhanced />} />
           <Route path="products" element={<ProductList />} />
+          <Route path="bank-accounts" element={<BankAccountList />} />
           <Route path="customers" element={<CustomerList />} />
           <Route path="customers/:id/ledger" element={<CustomerLedger />} />
           <Route path="vendors" element={<VendorList />} />

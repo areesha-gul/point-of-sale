@@ -1,14 +1,14 @@
 const express = require('express');
-const { getDatabase } = require('../database/connection');
+const { query, withTransaction } = require('../database/postgres');
 const AccountingService = require('../services/accountingService');
+const { generatePaymentId } = require('../utils/idGenerator');
 
 const router = express.Router();
 
 // Get all payments
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const db = getDatabase();
-        const payments = db.prepare(`
+        const result = await query(`
             SELECT p.*, 
                 CASE 
                     WHEN p.party_type = 'customer' THEN c.name
@@ -19,8 +19,8 @@ router.get('/', (req, res) => {
             LEFT JOIN vendors v ON p.party_type = 'vendor' AND p.party_id = v.id
             WHERE p.voided = 0
             ORDER BY p.date DESC, p.id DESC
-        `).all();
-        res.json(payments);
+        `);
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching payments:', error);
         res.status(500).json({ error: 'Failed to fetch payments' });
@@ -28,10 +28,9 @@ router.get('/', (req, res) => {
 });
 
 // Get payment by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
-        const db = getDatabase();
-        const payment = db.prepare(`
+        const result = await query(`
             SELECT p.*, 
                 CASE 
                     WHEN p.party_type = 'customer' THEN c.name
@@ -40,8 +39,9 @@ router.get('/:id', (req, res) => {
             FROM payments p
             LEFT JOIN customers c ON p.party_type = 'customer' AND p.party_id = c.id
             LEFT JOIN vendors v ON p.party_type = 'vendor' AND p.party_id = v.id
-            WHERE p.id = ?
-        `).get(req.params.id);
+            WHERE p.id = $1
+        `, [req.params.id]);
+        const payment = result.rows[0];
         
         if (!payment) {
             return res.status(404).json({ error: 'Payment not found' });
@@ -55,9 +55,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create payment
-router.post('/', (req, res) => {
-    const db = getDatabase();
-    
+router.post('/', async (req, res) => {
     try {
         const { party_type, party_id, amount, method, direction, date, notes } = req.body;
 
@@ -84,7 +82,8 @@ router.post('/', (req, res) => {
 
         // Verify party exists and get balance
         const partyTable = party_type === 'customer' ? 'customers' : 'vendors';
-        const party = db.prepare(`SELECT current_balance FROM ${partyTable} WHERE id = ?`).get(party_id);
+        const partyResult = await query(`SELECT current_balance FROM ${partyTable} WHERE id = $1`, [party_id]);
+        const party = partyResult.rows[0];
         if (!party) {
             return res.status(404).json({ error: `${party_type} not found` });
         }
@@ -96,7 +95,8 @@ router.post('/', (req, res) => {
 
         // For outgoing payments, check if sufficient cash/bank balance
         if (direction === 'out') {
-            const account = db.prepare('SELECT current_balance FROM cash_bank_accounts WHERE type = ?').get(method);
+            const accountResult = await query('SELECT current_balance FROM cash_bank_accounts WHERE type = $1', [method]);
+            const account = accountResult.rows[0];
             if (account && amount > account.current_balance) {
                 return res.status(400).json({ 
                     error: 'Insufficient balance', 
@@ -106,40 +106,38 @@ router.post('/', (req, res) => {
         }
 
         // Start transaction
-        const transaction = db.transaction(() => {
+        const paymentId = await withTransaction(async (client) => {
+            const generatedPaymentId = await generatePaymentId();
             // Insert payment
-            const result = db.prepare(`
-                INSERT INTO payments (party_type, party_id, amount, method, direction, date, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `).run(party_type, party_id, amount, method, direction, date, notes);
-
-            const paymentId = result.lastInsertRowid;
+            const result = await client.query(`
+                INSERT INTO payments (payment_id, party_type, party_id, amount, method, direction, date, notes)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+            `, [generatedPaymentId, party_type, party_id, amount, method, direction, date, notes]);
+            const databasePaymentId = result.rows[0].id;
 
             // Update party balance
             if (party_type === 'customer' && direction === 'in') {
-                AccountingService.updateCustomerBalance(party_id, amount, 'subtract');
+                await AccountingService.updateCustomerBalance(party_id, amount, 'subtract', client);
             } else if (party_type === 'vendor' && direction === 'out') {
-                AccountingService.updateVendorBalance(party_id, amount, 'subtract');
+                await AccountingService.updateVendorBalance(party_id, amount, 'subtract', client);
             }
 
             // Update cash/bank balance
             const accountType = method;
             if (direction === 'in') {
-                AccountingService.updateAccountBalance(accountType, amount, 'add');
+                await AccountingService.updateAccountBalance(accountType, amount, 'add', client);
             } else {
-                AccountingService.updateAccountBalance(accountType, amount, 'subtract');
+                await AccountingService.updateAccountBalance(accountType, amount, 'subtract', client);
             }
 
             // Record ledger entries
-            AccountingService.recordPayment(req.body, paymentId);
+            await AccountingService.recordPayment(req.body, databasePaymentId, client);
 
-            return paymentId;
+            return databasePaymentId;
         });
 
-        const paymentId = transaction();
-
         // Fetch created payment with details
-        const payment = db.prepare(`
+        const paymentResult = await query(`
             SELECT p.*, 
                 CASE 
                     WHEN p.party_type = 'customer' THEN c.name
@@ -148,8 +146,9 @@ router.post('/', (req, res) => {
             FROM payments p
             LEFT JOIN customers c ON p.party_type = 'customer' AND p.party_id = c.id
             LEFT JOIN vendors v ON p.party_type = 'vendor' AND p.party_id = v.id
-            WHERE p.id = ?
-        `).get(paymentId);
+            WHERE p.id = $1
+        `, [paymentId]);
+        const payment = paymentResult.rows[0];
 
         res.status(201).json(payment);
     } catch (error) {

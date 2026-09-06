@@ -37,7 +37,7 @@ The most important business requirement - record when a customer pays a vendor d
 
 - **Frontend**: React 18 + Vite + Tailwind CSS
 - **Backend**: Node.js + Express
-- **Database**: SQLite with better-sqlite3
+- **Database**: Supabase PostgreSQL
 - **Authentication**: Session-based with bcrypt password hashing
 
 ## 📋 Prerequisites
@@ -62,7 +62,11 @@ cd ../frontend
 npm install
 ```
 
-### 2. Initialize Database
+### 2. Configure Database
+
+Set `DATABASE_URL` to your Supabase Session Pooler connection string in `backend/.env` or Render.
+
+### 3. Initialize Database
 
 ```bash
 cd backend
@@ -74,7 +78,7 @@ This creates the database with:
 - Default cash and bank accounts
 - Admin user (username: `admin`, password: `admin123`)
 
-### 3. Start Development Servers
+### 4. Start Development Servers
 
 ```bash
 # From root directory
@@ -85,7 +89,7 @@ This starts:
 - Backend API on `http://localhost:5000`
 - Frontend on `http://localhost:5173`
 
-### 4. Login
+### 5. Login
 
 Open `http://localhost:5173` in your browser and login with:
 - **Username**: `admin`
@@ -140,7 +144,7 @@ Open `http://localhost:5173` in your browser and login with:
 grain-trading-pos/
 ├── backend/
 │   ├── database/
-│   │   ├── schema.sql          # Database schema
+│   │   ├── schema.postgres.sql # PostgreSQL database schema
 │   │   ├── init.js             # Database initialization
 │   │   └── connection.js       # Database connection
 │   ├── routes/

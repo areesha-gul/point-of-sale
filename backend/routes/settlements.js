@@ -1,22 +1,21 @@
 const express = require('express');
-const { getDatabase } = require('../database/connection');
+const { query, withTransaction } = require('../database/postgres');
 const AccountingService = require('../services/accountingService');
 
 const router = express.Router();
 
 // Get all settlements
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const db = getDatabase();
-        const settlements = db.prepare(`
+        const result = await query(`
             SELECT s.*, c.name as customer_name, v.name as vendor_name
             FROM settlements s
             JOIN customers c ON s.customer_id = c.id
             JOIN vendors v ON s.vendor_id = v.id
             WHERE s.voided = 0
             ORDER BY s.date DESC, s.id DESC
-        `).all();
-        res.json(settlements);
+        `);
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching settlements:', error);
         res.status(500).json({ error: 'Failed to fetch settlements' });
@@ -24,18 +23,18 @@ router.get('/', (req, res) => {
 });
 
 // Get settlement by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
-        const db = getDatabase();
-        const settlement = db.prepare(`
+        const result = await query(`
             SELECT s.*, 
                 c.name as customer_name, c.phone as customer_phone, c.address as customer_address,
                 v.name as vendor_name, v.phone as vendor_phone, v.address as vendor_address
             FROM settlements s
             JOIN customers c ON s.customer_id = c.id
             JOIN vendors v ON s.vendor_id = v.id
-            WHERE s.id = ?
-        `).get(req.params.id);
+            WHERE s.id = $1
+        `, [req.params.id]);
+        const settlement = result.rows[0];
         
         if (!settlement) {
             return res.status(404).json({ error: 'Settlement not found' });
@@ -62,9 +61,7 @@ router.get('/:id', (req, res) => {
  * - Result: Customer receivable = Rs. 30,00,000, Vendor payable = Rs. 0
  * - Company cash/bank balances remain unchanged
  */
-router.post('/', (req, res) => {
-    const db = getDatabase();
-    
+router.post('/', async (req, res) => {
     try {
         const { customer_id, vendor_id, amount, date, notes } = req.body;
 
@@ -78,13 +75,15 @@ router.post('/', (req, res) => {
         }
 
         // Get customer balance (receivable - what they owe us)
-        const customer = db.prepare('SELECT name, current_balance FROM customers WHERE id = ?').get(customer_id);
+        const customerResult = await query('SELECT name, current_balance FROM customers WHERE id = $1', [customer_id]);
+        const customer = customerResult.rows[0];
         if (!customer) {
             return res.status(404).json({ error: 'Customer not found' });
         }
 
         // Get vendor balance (payable - what we owe them)
-        const vendor = db.prepare('SELECT name, current_balance FROM vendors WHERE id = ?').get(vendor_id);
+        const vendorResult = await query('SELECT name, current_balance FROM vendors WHERE id = $1', [vendor_id]);
+        const vendor = vendorResult.rows[0];
         if (!vendor) {
             return res.status(404).json({ error: 'Vendor not found' });
         }
@@ -110,40 +109,38 @@ router.post('/', (req, res) => {
         }
 
         // Start transaction
-        const transaction = db.transaction(() => {
+        const settlementId = await withTransaction(async (client) => {
             // Insert settlement record
-            const result = db.prepare(`
+            const result = await client.query(`
                 INSERT INTO settlements (customer_id, vendor_id, amount, date, notes)
-                VALUES (?, ?, ?, ?, ?)
-            `).run(customer_id, vendor_id, amount, date, notes);
-
-            const settlementId = result.lastInsertRowid;
+                VALUES ($1, $2, $3, $4, $5) RETURNING id
+            `, [customer_id, vendor_id, amount, date, notes]);
+            const databaseSettlementId = result.rows[0].id;
 
             // CRITICAL: Update customer balance (reduce receivable - they owe us less)
-            AccountingService.updateCustomerBalance(customer_id, amount, 'subtract');
+            await AccountingService.updateCustomerBalance(customer_id, amount, 'subtract', client);
 
             // CRITICAL: Update vendor balance (reduce payable - we owe them less)
-            AccountingService.updateVendorBalance(vendor_id, amount, 'subtract');
+            await AccountingService.updateVendorBalance(vendor_id, amount, 'subtract', client);
 
             // CRITICAL: Record ledger entries WITHOUT touching cash/bank accounts
             // This is what makes direct settlement different from regular payments
-            AccountingService.recordSettlement(req.body, settlementId);
+            await AccountingService.recordSettlement(req.body, databaseSettlementId, client);
 
-            return settlementId;
+            return databaseSettlementId;
         });
 
-        const settlementId = transaction();
-
         // Fetch created settlement with full details
-        const settlement = db.prepare(`
+        const settlementResult = await query(`
             SELECT s.*, 
                 c.name as customer_name, c.current_balance as customer_balance,
                 v.name as vendor_name, v.current_balance as vendor_balance
             FROM settlements s
             JOIN customers c ON s.customer_id = c.id
             JOIN vendors v ON s.vendor_id = v.id
-            WHERE s.id = ?
-        `).get(settlementId);
+            WHERE s.id = $1
+        `, [settlementId]);
+        const settlement = settlementResult.rows[0];
 
         res.status(201).json({
             ...settlement,
@@ -161,18 +158,17 @@ router.post('/', (req, res) => {
 });
 
 // Get settlements involving a specific customer
-router.get('/customer/:customerId', (req, res) => {
+router.get('/customer/:customerId', async (req, res) => {
     try {
-        const db = getDatabase();
-        const settlements = db.prepare(`
+        const result = await query(`
             SELECT s.*, c.name as customer_name, v.name as vendor_name
             FROM settlements s
             JOIN customers c ON s.customer_id = c.id
             JOIN vendors v ON s.vendor_id = v.id
-            WHERE s.customer_id = ? AND s.voided = 0
+            WHERE s.customer_id = $1 AND s.voided = 0
             ORDER BY s.date DESC
-        `).all(req.params.customerId);
-        res.json(settlements);
+        `, [req.params.customerId]);
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching customer settlements:', error);
         res.status(500).json({ error: 'Failed to fetch customer settlements' });
@@ -180,18 +176,17 @@ router.get('/customer/:customerId', (req, res) => {
 });
 
 // Get settlements involving a specific vendor
-router.get('/vendor/:vendorId', (req, res) => {
+router.get('/vendor/:vendorId', async (req, res) => {
     try {
-        const db = getDatabase();
-        const settlements = db.prepare(`
+        const result = await query(`
             SELECT s.*, c.name as customer_name, v.name as vendor_name
             FROM settlements s
             JOIN customers c ON s.customer_id = c.id
             JOIN vendors v ON s.vendor_id = v.id
-            WHERE s.vendor_id = ? AND s.voided = 0
+            WHERE s.vendor_id = $1 AND s.voided = 0
             ORDER BY s.date DESC
-        `).all(req.params.vendorId);
-        res.json(settlements);
+        `, [req.params.vendorId]);
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching vendor settlements:', error);
         res.status(500).json({ error: 'Failed to fetch vendor settlements' });

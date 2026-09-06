@@ -18,7 +18,7 @@ export default function DashboardEnhanced() {
         try {
             const [dashboardRes, kpiRes] = await Promise.all([
                 dashboard.getSummary(),
-                fetch('/api/dashboard/kpis', { credentials: 'include' }).then(r => r.json()).catch(() => null)
+                dashboard.getKpis().then(response => response.data).catch(() => null)
             ]);
             
             setData(dashboardRes.data);

@@ -1,15 +1,14 @@
 const express = require('express');
-const { getDatabase } = require('../database/connection');
+const { query } = require('../database/postgres');
 const { generateCustomerId } = require('../utils/idGenerator');
 
 const router = express.Router();
 
 // Get all customers
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const db = getDatabase();
-        const customers = db.prepare('SELECT * FROM customers ORDER BY name').all();
-        res.json(customers);
+        const result = await query('SELECT * FROM customers ORDER BY name');
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching customers:', error);
         res.status(500).json({ error: 'Failed to fetch customers' });
@@ -17,10 +16,10 @@ router.get('/', (req, res) => {
 });
 
 // Get customer by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
-        const db = getDatabase();
-        const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
+        const result = await query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
+        const customer = result.rows[0];
         
         if (!customer) {
             return res.status(404).json({ error: 'Customer not found' });
@@ -34,7 +33,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create customer
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const { name, phone, address, opening_balance = 0 } = req.body;
 
@@ -42,14 +41,13 @@ router.post('/', (req, res) => {
             return res.status(400).json({ error: 'Customer name is required' });
         }
 
-        const db = getDatabase();
-        const customerId = generateCustomerId();
+        const customerId = await generateCustomerId();
         
-        const result = db.prepare(
-            'INSERT INTO customers (customer_id, name, phone, address, opening_balance, current_balance) VALUES (?, ?, ?, ?, ?, ?)'
-        ).run(customerId, name, phone, address, opening_balance, opening_balance);
-
-        const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(result.lastInsertRowid);
+        const result = await query(
+            'INSERT INTO customers (customer_id, name, phone, address, opening_balance, current_balance) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [customerId, name, phone, address, opening_balance, opening_balance]
+        );
+        const customer = result.rows[0];
         res.status(201).json(customer);
     } catch (error) {
         console.error('Error creating customer:', error);
@@ -58,21 +56,20 @@ router.post('/', (req, res) => {
 });
 
 // Update customer
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
         const { name, phone, address } = req.body;
-        const db = getDatabase();
-
-        const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
+        const customerResult = await query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
+        const customer = customerResult.rows[0];
         if (!customer) {
             return res.status(404).json({ error: 'Customer not found' });
         }
 
-        db.prepare(
-            'UPDATE customers SET name = ?, phone = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).run(name || customer.name, phone || customer.phone, address || customer.address, req.params.id);
-
-        const updated = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
+        const updatedResult = await query(
+            'UPDATE customers SET name = $1, phone = $2, address = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
+            [name || customer.name, phone || customer.phone, address || customer.address, req.params.id]
+        );
+        const updated = updatedResult.rows[0];
         res.json(updated);
     } catch (error) {
         console.error('Error updating customer:', error);
@@ -81,12 +78,12 @@ router.put('/:id', (req, res) => {
 });
 
 // Get customer ledger (transaction history)
-router.get('/:id/ledger', (req, res) => {
+router.get('/:id/ledger', async (req, res) => {
     try {
-        const db = getDatabase();
         const customerId = req.params.id;
 
-        const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+        const customerResult = await query('SELECT * FROM customers WHERE id = $1', [customerId]);
+        const customer = customerResult.rows[0];
         if (!customer) {
             return res.status(404).json({ error: 'Customer not found' });
         }
@@ -106,13 +103,14 @@ router.get('/:id/ledger', (req, res) => {
         }
 
         // Get sales
-        const sales = db.prepare(`
+        const salesResult = await query(`
             SELECT s.id, s.date, s.total, s.amount_paid, p.name as product_name
             FROM sales s
             JOIN products p ON s.product_id = p.id
-            WHERE s.customer_id = ? AND s.voided = 0
+            WHERE s.customer_id = $1 AND s.voided = 0
             ORDER BY s.date
-        `).all(customerId);
+        `, [customerId]);
+        const sales = salesResult.rows;
 
         sales.forEach(sale => {
             const receivable = sale.total - sale.amount_paid;
@@ -129,12 +127,13 @@ router.get('/:id/ledger', (req, res) => {
         });
 
         // Get payments
-        const payments = db.prepare(`
+        const paymentsResult = await query(`
             SELECT id, date, amount, notes
             FROM payments
-            WHERE party_type = 'customer' AND party_id = ? AND direction = 'in' AND voided = 0
+            WHERE party_type = 'customer' AND party_id = $1 AND direction = 'in' AND voided = 0
             ORDER BY date
-        `).all(customerId);
+        `, [customerId]);
+        const payments = paymentsResult.rows;
 
         payments.forEach(payment => {
             transactions.push({
@@ -148,13 +147,14 @@ router.get('/:id/ledger', (req, res) => {
         });
 
         // Get settlements
-        const settlements = db.prepare(`
+        const settlementsResult = await query(`
             SELECT s.id, s.date, s.amount, s.notes, v.name as vendor_name
             FROM settlements s
             JOIN vendors v ON s.vendor_id = v.id
-            WHERE s.customer_id = ? AND s.voided = 0
+            WHERE s.customer_id = $1 AND s.voided = 0
             ORDER BY s.date
-        `).all(customerId);
+        `, [customerId]);
+        const settlements = settlementsResult.rows;
 
         settlements.forEach(settlement => {
             transactions.push({

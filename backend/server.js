@@ -1,10 +1,9 @@
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
-const path = require('path');
 require('dotenv').config();
 
-const { initDatabase } = require('./database/connection');
+const { initPostgres, closePostgres } = require('./database/postgres');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -121,7 +120,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
     try {
         console.log('Initializing database...');
-        await initDatabase();
+        await initPostgres();
         console.log('Database initialized successfully');
         
         app.listen(PORT, '0.0.0.0', () => {
@@ -139,7 +138,5 @@ startServer();
 // Graceful shutdown
 process.on('SIGTERM', () => {
     console.log('SIGTERM received, closing server...');
-    const { closeDatabase } = require('./database/connection');
-    closeDatabase();
-    process.exit(0);
+    closePostgres().finally(() => process.exit(0));
 });

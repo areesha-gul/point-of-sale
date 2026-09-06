@@ -1,24 +1,23 @@
-const { getDatabase } = require('../database/connection');
+const { query } = require('../database/postgres');
 
 /**
  * Generate formatted IDs for entities
  * Format: PREFIX-NNNNN (e.g., V-00001, C-00001, P-00001)
  */
 
-function generateFormattedId(prefix, tableName, columnName) {
-    const db = getDatabase();
-    
+async function generateFormattedId(prefix, tableName, columnName) {
     // Get the last ID number
-    const result = db.prepare(`
+    const result = await query(`
         SELECT ${columnName} FROM ${tableName} 
         ORDER BY id DESC LIMIT 1
-    `).get();
+    `);
+    const row = result.rows[0];
     
     let nextNumber = 1;
     
-    if (result && result[columnName]) {
+    if (row && row[columnName]) {
         // Extract number from format PREFIX-NNNNN
-        const match = result[columnName].match(/\d+$/);
+        const match = row[columnName].match(/\d+$/);
         if (match) {
             nextNumber = parseInt(match[0]) + 1;
         }
@@ -29,39 +28,39 @@ function generateFormattedId(prefix, tableName, columnName) {
     return `${prefix}-${formattedNumber}`;
 }
 
-function generateVendorId() {
+async function generateVendorId() {
     return generateFormattedId('V', 'vendors', 'vendor_id');
 }
 
-function generateCustomerId() {
+async function generateCustomerId() {
     return generateFormattedId('C', 'customers', 'customer_id');
 }
 
-function generateProductId() {
+async function generateProductId() {
     return generateFormattedId('P', 'products', 'product_id');
 }
 
-function generatePurchaseId() {
+async function generatePurchaseId() {
     return generateFormattedId('PUR', 'purchases', 'purchase_id');
 }
 
-function generateSaleId() {
+async function generateSaleId() {
     return generateFormattedId('SAL', 'sales', 'sale_id');
 }
 
-function generatePaymentId() {
+async function generatePaymentId() {
     return generateFormattedId('PAY', 'payments', 'payment_id');
 }
 
-function generateAccountId() {
+async function generateAccountId() {
     return generateFormattedId('ACC', 'cash_bank_accounts', 'account_id');
 }
 
-function generateBankTransactionId() {
+async function generateBankTransactionId() {
     return generateFormattedId('BT', 'bank_transactions', 'transaction_id');
 }
 
-function generateDeliveryId() {
+async function generateDeliveryId() {
     return generateFormattedId('DD', 'direct_deliveries', 'delivery_id');
 }
 

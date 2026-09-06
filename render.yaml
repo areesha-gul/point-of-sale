@@ -14,8 +14,8 @@ services:
         generateValue: true
       - key: JWT_SECRET
         generateValue: true
-      - key: DB_PATH
-        value: /opt/render/project/src/backend/database/pos.db
+      - key: DATABASE_URL
+        sync: false
       - key: FRONTEND_URL
         value: https://your-frontend-url.vercel.app
       - key: NODE_VERSION

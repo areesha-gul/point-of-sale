@@ -1,4 +1,4 @@
-const { getDatabase } = require('../database/connection');
+const { query } = require('../database/postgres');
 
 /**
  * Accounting Service - Handles double-entry bookkeeping logic
@@ -7,76 +7,77 @@ class AccountingService {
     /**
      * Record a sale transaction with ledger entries
      */
-    static recordSale(saleData, saleId) {
-        const db = getDatabase();
+    static async recordSale(saleData, saleId, client = null) {
+        const db = client || { query };
         const { customer_id, product_id, qty_kg, rate, total, amount_paid, payment_method, date } = saleData;
 
         // Get product's average cost for COGS calculation
-        const product = db.prepare('SELECT avg_cost, current_stock FROM products WHERE id = ?').get(product_id);
+        const productResult = await db.query('SELECT avg_cost, current_stock FROM products WHERE id = $1', [product_id]);
+        const product = productResult.rows[0];
         const costOfGoodsSold = qty_kg * product.avg_cost;
 
-        const insertLedger = db.prepare(
-            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        const insertLedger = (values) => db.query(
+            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', values
         );
 
         // Dr. Customer Receivable (unpaid amount)
         const unpaidAmount = total - amount_paid;
         if (unpaidAmount > 0) {
-            insertLedger.run('sale', saleId, 'customer', customer_id, 'receivable', unpaidAmount, 0, date);
+            await insertLedger(['sale', saleId, 'customer', customer_id, 'receivable', unpaidAmount, 0, date]);
         }
 
         // Dr. Cash/Bank (if paid)
         if (amount_paid > 0 && payment_method !== 'none') {
             const accountType = payment_method === 'cash' ? 'cash' : 'bank';
-            insertLedger.run('sale', saleId, 'account', null, accountType, amount_paid, 0, date);
+            await insertLedger(['sale', saleId, 'account', null, accountType, amount_paid, 0, date]);
         }
 
         // Cr. Sales Revenue
-        insertLedger.run('sale', saleId, null, null, 'revenue', 0, total, date);
+        await insertLedger(['sale', saleId, null, null, 'revenue', 0, total, date]);
 
         // Dr. COGS
-        insertLedger.run('sale', saleId, null, null, 'cogs', costOfGoodsSold, 0, date);
+        await insertLedger(['sale', saleId, null, null, 'cogs', costOfGoodsSold, 0, date]);
 
         // Cr. Stock
-        insertLedger.run('sale', saleId, null, null, 'stock', 0, costOfGoodsSold, date);
+        await insertLedger(['sale', saleId, null, null, 'stock', 0, costOfGoodsSold, date]);
     }
 
     /**
      * Record a purchase transaction with ledger entries
      */
-    static recordPurchase(purchaseData, purchaseId) {
-        const db = getDatabase();
+    static async recordPurchase(purchaseData, purchaseId, client = null) {
+        const db = client || { query };
         const { vendor_id, total, amount_paid, payment_method, date } = purchaseData;
 
-        const insertLedger = db.prepare(
-            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        const insertLedger = (values) => db.query(
+            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', values
         );
 
         // Dr. Stock (at purchase cost)
-        insertLedger.run('purchase', purchaseId, null, null, 'stock', total, 0, date);
+        await insertLedger(['purchase', purchaseId, null, null, 'stock', total, 0, date]);
 
         // Cr. Vendor Payable (unpaid amount)
         const unpaidAmount = total - amount_paid;
         if (unpaidAmount > 0) {
-            insertLedger.run('purchase', purchaseId, 'vendor', vendor_id, 'payable', 0, unpaidAmount, date);
+            await insertLedger(['purchase', purchaseId, 'vendor', vendor_id, 'payable', 0, unpaidAmount, date]);
         }
 
         // Cr. Cash/Bank (if paid)
         if (amount_paid > 0 && payment_method !== 'none') {
             const accountType = payment_method === 'cash' ? 'cash' : 'bank';
-            insertLedger.run('purchase', purchaseId, 'account', null, accountType, 0, amount_paid, date);
+            await insertLedger(['purchase', purchaseId, 'account', null, accountType, 0, amount_paid, date]);
         }
     }
 
     /**
      * Record a payment (customer payment received or vendor payment made)
      */
-    static recordPayment(paymentData, paymentId) {
-        const db = getDatabase();
+    static async recordPayment(paymentData, paymentId, client = null) {
+        const db = client || { query };
         const { party_type, party_id, amount, method, direction, date } = paymentData;
 
-        const insertLedger = db.prepare(
-            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        const insertLedger = (values) => db.query(
+            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', values
         );
 
         const accountType = method === 'cash' ? 'cash' : 'bank';
@@ -84,15 +85,15 @@ class AccountingService {
         if (direction === 'in') {
             // Customer payment received
             // Dr. Cash/Bank
-            insertLedger.run('payment', paymentId, 'account', null, accountType, amount, 0, date);
+            await insertLedger(['payment', paymentId, 'account', null, accountType, amount, 0, date]);
             // Cr. Customer Receivable
-            insertLedger.run('payment', paymentId, 'customer', party_id, 'receivable', 0, amount, date);
+            await insertLedger(['payment', paymentId, 'customer', party_id, 'receivable', 0, amount, date]);
         } else {
             // Vendor payment made
             // Dr. Vendor Payable
-            insertLedger.run('payment', paymentId, 'vendor', party_id, 'payable', amount, 0, date);
+            await insertLedger(['payment', paymentId, 'vendor', party_id, 'payable', amount, 0, date]);
             // Cr. Cash/Bank
-            insertLedger.run('payment', paymentId, 'account', null, accountType, 0, amount, date);
+            await insertLedger(['payment', paymentId, 'account', null, accountType, 0, amount, date]);
         }
     }
 
@@ -100,19 +101,19 @@ class AccountingService {
      * Record a direct settlement (critical feature)
      * Customer pays vendor directly without cash/bank involvement
      */
-    static recordSettlement(settlementData, settlementId) {
-        const db = getDatabase();
+    static async recordSettlement(settlementData, settlementId, client = null) {
+        const db = client || { query };
         const { customer_id, vendor_id, amount, date } = settlementData;
 
-        const insertLedger = db.prepare(
-            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        const insertLedger = (values) => db.query(
+            'INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', values
         );
 
         // Dr. Vendor Payable (reduce what we owe vendor)
-        insertLedger.run('settlement', settlementId, 'vendor', vendor_id, 'payable', amount, 0, date);
+        await insertLedger(['settlement', settlementId, 'vendor', vendor_id, 'payable', amount, 0, date]);
 
         // Cr. Customer Receivable (reduce what customer owes us)
-        insertLedger.run('settlement', settlementId, 'customer', customer_id, 'receivable', 0, amount, date);
+        await insertLedger(['settlement', settlementId, 'customer', customer_id, 'receivable', 0, amount, date]);
 
         // Note: No cash or bank accounts are touched - this is the key feature
     }
@@ -120,63 +121,62 @@ class AccountingService {
     /**
      * Update product stock and average cost after purchase
      */
-    static updateProductAfterPurchase(productId, qty, purchaseCost) {
-        const db = getDatabase();
-        const product = db.prepare('SELECT current_stock, avg_cost FROM products WHERE id = ?').get(productId);
+    static async updateProductAfterPurchase(productId, qty, purchaseCost, client = null) {
+        const db = client || { query };
+        const productResult = await db.query('SELECT current_stock, avg_cost FROM products WHERE id = $1', [productId]);
+        const product = productResult.rows[0];
 
-        const oldStock = product.current_stock;
-        const oldAvgCost = product.avg_cost;
-        const newStock = oldStock + qty;
+        const oldStock = Number(product.current_stock);
+        const oldAvgCost = Number(product.avg_cost);
+        const newStock = oldStock + Number(qty);
 
         // Calculate weighted average cost
         const totalOldValue = oldStock * oldAvgCost;
-        const totalNewValue = qty * purchaseCost;
+        const totalNewValue = Number(qty) * Number(purchaseCost);
         const newAvgCost = newStock > 0 ? (totalOldValue + totalNewValue) / newStock : 0;
 
-        db.prepare('UPDATE products SET current_stock = ?, avg_cost = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-            .run(newStock, newAvgCost, productId);
+        await db.query('UPDATE products SET current_stock = $1, avg_cost = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [newStock, newAvgCost, productId]);
     }
 
     /**
      * Update product stock after sale
      */
-    static updateProductAfterSale(productId, qty) {
-        const db = getDatabase();
-        db.prepare('UPDATE products SET current_stock = current_stock - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-            .run(qty, productId);
+    static async updateProductAfterSale(productId, qty, client = null) {
+        const db = client || { query };
+        await db.query('UPDATE products SET current_stock = current_stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [qty, productId]);
     }
 
     /**
      * Update customer balance
      */
-    static updateCustomerBalance(customerId, amount, operation = 'add') {
-        const db = getDatabase();
+    static async updateCustomerBalance(customerId, amount, operation = 'add', client = null) {
+        const db = client || { query };
         const sql = operation === 'add'
-            ? 'UPDATE customers SET current_balance = current_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-            : 'UPDATE customers SET current_balance = current_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-        db.prepare(sql).run(amount, customerId);
+            ? 'UPDATE customers SET current_balance = current_balance + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2'
+            : 'UPDATE customers SET current_balance = current_balance - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2';
+        await db.query(sql, [amount, customerId]);
     }
 
     /**
      * Update vendor balance
      */
-    static updateVendorBalance(vendorId, amount, operation = 'add') {
-        const db = getDatabase();
+    static async updateVendorBalance(vendorId, amount, operation = 'add', client = null) {
+        const db = client || { query };
         const sql = operation === 'add'
-            ? 'UPDATE vendors SET current_balance = current_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-            : 'UPDATE vendors SET current_balance = current_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-        db.prepare(sql).run(amount, vendorId);
+            ? 'UPDATE vendors SET current_balance = current_balance + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2'
+            : 'UPDATE vendors SET current_balance = current_balance - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2';
+        await db.query(sql, [amount, vendorId]);
     }
 
     /**
      * Update cash or bank account balance
      */
-    static updateAccountBalance(accountType, amount, operation = 'add') {
-        const db = getDatabase();
+    static async updateAccountBalance(accountType, amount, operation = 'add', client = null) {
+        const db = client || { query };
         const sql = operation === 'add'
-            ? 'UPDATE cash_bank_accounts SET current_balance = current_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE type = ?'
-            : 'UPDATE cash_bank_accounts SET current_balance = current_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE type = ?';
-        db.prepare(sql).run(amount, accountType);
+            ? 'UPDATE cash_bank_accounts SET current_balance = current_balance + $1, updated_at = CURRENT_TIMESTAMP WHERE type = $2'
+            : 'UPDATE cash_bank_accounts SET current_balance = current_balance - $1, updated_at = CURRENT_TIMESTAMP WHERE type = $2';
+        await db.query(sql, [amount, accountType]);
     }
 }
 

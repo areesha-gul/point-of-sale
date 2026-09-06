@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { purchases, vendors, products } from '../../services/api';
+import { purchases, vendors, products, bankAccounts } from '../../services/api';
 import { formatIndianCurrency, getTodayDate } from '../../services/formatter';
 
 export default function PurchaseFormComplete() {
@@ -52,14 +52,14 @@ export default function PurchaseFormComplete() {
             const [vendorsRes, productsRes, accountsRes] = await Promise.all([
                 vendors.getAll(),
                 products.getAll(),
-                fetch('/api/bank-accounts', { credentials: 'include' }).then(r => r.json())
+                bankAccounts.getAll()
             ]);
             
             setVendorList(vendorsRes.data);
             setProductList(productsRes.data);
-            setBankAccounts(accountsRes);
+            setBankAccounts(accountsRes.data);
         } catch (err) {
-            setError('Failed to load data');
+            setError(err.response?.data?.error || 'Could not load vendors, products, or bank accounts');
         } finally {
             setLoading(false);
         }
@@ -176,7 +176,7 @@ export default function PurchaseFormComplete() {
                     <div>
                         <label className="label">Select Vendor *</label>
                         <select
-                            className="input"
+                            className="input select-input"
                             value={formData.vendor_id}
                             onChange={handleVendorChange}
                             required
@@ -202,7 +202,7 @@ export default function PurchaseFormComplete() {
                     <div>
                         <label className="label">Select Product *</label>
                         <select
-                            className="input"
+                            className="input select-input"
                             value={formData.product_id}
                             onChange={handleProductChange}
                             required

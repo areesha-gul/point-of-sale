@@ -13,7 +13,8 @@ import {
     ShoppingCart,
     Truck,
     UserRound,
-    Users
+    Users,
+    WalletCards
 } from 'lucide-react';
 
 const primaryLinks = [
@@ -30,6 +31,7 @@ const additionalLinks = [
     { to: '/customers', label: 'Customers', icon: Users },
     { to: '/vendors', label: 'Vendors', icon: UserRound },
     { to: '/products', label: 'Products', icon: Package },
+    { to: '/bank-accounts', label: 'Bank Accounts', icon: WalletCards },
     { to: '/reports/outstanding', label: 'Reports', icon: BarChart3 }
 ];
 

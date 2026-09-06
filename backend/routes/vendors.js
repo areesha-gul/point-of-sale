@@ -1,15 +1,14 @@
 const express = require('express');
-const { getDatabase } = require('../database/connection');
+const { query } = require('../database/postgres');
 const { generateVendorId } = require('../utils/idGenerator');
 
 const router = express.Router();
 
 // Get all vendors
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const db = getDatabase();
-        const vendors = db.prepare('SELECT * FROM vendors ORDER BY name').all();
-        res.json(vendors);
+        const result = await query('SELECT * FROM vendors ORDER BY name');
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching vendors:', error);
         res.status(500).json({ error: 'Failed to fetch vendors' });
@@ -17,10 +16,10 @@ router.get('/', (req, res) => {
 });
 
 // Get vendor by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
-        const db = getDatabase();
-        const vendor = db.prepare('SELECT * FROM vendors WHERE id = ?').get(req.params.id);
+        const result = await query('SELECT * FROM vendors WHERE id = $1', [req.params.id]);
+        const vendor = result.rows[0];
         
         if (!vendor) {
             return res.status(404).json({ error: 'Vendor not found' });
@@ -34,7 +33,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create vendor
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const { name, phone, address, opening_balance = 0 } = req.body;
 
@@ -42,14 +41,13 @@ router.post('/', (req, res) => {
             return res.status(400).json({ error: 'Vendor name is required' });
         }
 
-        const db = getDatabase();
-        const vendorId = generateVendorId();
+        const vendorId = await generateVendorId();
         
-        const result = db.prepare(
-            'INSERT INTO vendors (vendor_id, name, phone, address, opening_balance, current_balance) VALUES (?, ?, ?, ?, ?, ?)'
-        ).run(vendorId, name, phone, address, opening_balance, opening_balance);
-
-        const vendor = db.prepare('SELECT * FROM vendors WHERE id = ?').get(result.lastInsertRowid);
+        const result = await query(
+            'INSERT INTO vendors (vendor_id, name, phone, address, opening_balance, current_balance) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [vendorId, name, phone, address, opening_balance, opening_balance]
+        );
+        const vendor = result.rows[0];
         res.status(201).json(vendor);
     } catch (error) {
         console.error('Error creating vendor:', error);
@@ -58,21 +56,20 @@ router.post('/', (req, res) => {
 });
 
 // Update vendor
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
         const { name, phone, address } = req.body;
-        const db = getDatabase();
-
-        const vendor = db.prepare('SELECT * FROM vendors WHERE id = ?').get(req.params.id);
+        const vendorResult = await query('SELECT * FROM vendors WHERE id = $1', [req.params.id]);
+        const vendor = vendorResult.rows[0];
         if (!vendor) {
             return res.status(404).json({ error: 'Vendor not found' });
         }
 
-        db.prepare(
-            'UPDATE vendors SET name = ?, phone = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).run(name || vendor.name, phone || vendor.phone, address || vendor.address, req.params.id);
-
-        const updated = db.prepare('SELECT * FROM vendors WHERE id = ?').get(req.params.id);
+        const updatedResult = await query(
+            'UPDATE vendors SET name = $1, phone = $2, address = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
+            [name || vendor.name, phone || vendor.phone, address || vendor.address, req.params.id]
+        );
+        const updated = updatedResult.rows[0];
         res.json(updated);
     } catch (error) {
         console.error('Error updating vendor:', error);
@@ -81,12 +78,12 @@ router.put('/:id', (req, res) => {
 });
 
 // Get vendor ledger (transaction history)
-router.get('/:id/ledger', (req, res) => {
+router.get('/:id/ledger', async (req, res) => {
     try {
-        const db = getDatabase();
         const vendorId = req.params.id;
 
-        const vendor = db.prepare('SELECT * FROM vendors WHERE id = ?').get(vendorId);
+        const vendorResult = await query('SELECT * FROM vendors WHERE id = $1', [vendorId]);
+        const vendor = vendorResult.rows[0];
         if (!vendor) {
             return res.status(404).json({ error: 'Vendor not found' });
         }
@@ -106,13 +103,14 @@ router.get('/:id/ledger', (req, res) => {
         }
 
         // Get purchases
-        const purchases = db.prepare(`
+        const purchasesResult = await query(`
             SELECT p.id, p.date, p.total, p.amount_paid, pr.name as product_name
             FROM purchases p
             JOIN products pr ON p.product_id = pr.id
-            WHERE p.vendor_id = ? AND p.voided = 0
+            WHERE p.vendor_id = $1 AND p.voided = 0
             ORDER BY p.date
-        `).all(vendorId);
+        `, [vendorId]);
+        const purchases = purchasesResult.rows;
 
         purchases.forEach(purchase => {
             const payable = purchase.total - purchase.amount_paid;
@@ -129,12 +127,13 @@ router.get('/:id/ledger', (req, res) => {
         });
 
         // Get payments
-        const payments = db.prepare(`
+        const paymentsResult = await query(`
             SELECT id, date, amount, notes
             FROM payments
-            WHERE party_type = 'vendor' AND party_id = ? AND direction = 'out' AND voided = 0
+            WHERE party_type = 'vendor' AND party_id = $1 AND direction = 'out' AND voided = 0
             ORDER BY date
-        `).all(vendorId);
+        `, [vendorId]);
+        const payments = paymentsResult.rows;
 
         payments.forEach(payment => {
             transactions.push({
@@ -148,13 +147,14 @@ router.get('/:id/ledger', (req, res) => {
         });
 
         // Get settlements
-        const settlements = db.prepare(`
+        const settlementsResult = await query(`
             SELECT s.id, s.date, s.amount, s.notes, c.name as customer_name
             FROM settlements s
             JOIN customers c ON s.customer_id = c.id
-            WHERE s.vendor_id = ? AND s.voided = 0
+            WHERE s.vendor_id = $1 AND s.voided = 0
             ORDER BY s.date
-        `).all(vendorId);
+        `, [vendorId]);
+        const settlements = settlementsResult.rows;
 
         settlements.forEach(settlement => {
             transactions.push({

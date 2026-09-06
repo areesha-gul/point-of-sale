@@ -109,7 +109,8 @@ export const settlements = {
 
 // Dashboard
 export const dashboard = {
-    getSummary: () => api.get('/dashboard')
+    getSummary: () => api.get('/dashboard'),
+    getKpis: () => api.get('/dashboard/kpis')
 };
 
 // Reports
@@ -124,4 +125,11 @@ export const reports = {
 export const accounts = {
     getAll: () => api.get('/accounts'),
     getTransactions: (id) => api.get(`/accounts/${id}/transactions`)
+};
+
+// Bank accounts
+export const bankAccounts = {
+    getAll: () => api.get('/bank-accounts'),
+    create: (data) => api.post('/bank-accounts', data),
+    update: (id, data) => api.put(`/bank-accounts/${id}`, data)
 };

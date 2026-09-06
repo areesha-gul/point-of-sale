@@ -1,14 +1,13 @@
 const express = require('express');
-const { getDatabase } = require('../database/connection');
+const { query } = require('../database/postgres');
 
 const router = express.Router();
 
 // Get all cash and bank accounts
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const db = getDatabase();
-        const accounts = db.prepare('SELECT * FROM cash_bank_accounts ORDER BY type, name').all();
-        res.json(accounts);
+        const result = await query('SELECT * FROM cash_bank_accounts ORDER BY type, name');
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching accounts:', error);
         res.status(500).json({ error: 'Failed to fetch accounts' });
@@ -16,12 +15,12 @@ router.get('/', (req, res) => {
 });
 
 // Get account transactions
-router.get('/:id/transactions', (req, res) => {
+router.get('/:id/transactions', async (req, res) => {
     try {
-        const db = getDatabase();
         const accountId = req.params.id;
 
-        const account = db.prepare('SELECT * FROM cash_bank_accounts WHERE id = ?').get(accountId);
+        const accountResult = await query('SELECT * FROM cash_bank_accounts WHERE id = $1', [accountId]);
+        const account = accountResult.rows[0];
         if (!account) {
             return res.status(404).json({ error: 'Account not found' });
         }
@@ -29,15 +28,16 @@ router.get('/:id/transactions', (req, res) => {
         const transactions = [];
 
         // Get sales with cash/bank payment
-        const sales = db.prepare(`
+        const salesResult = await query(`
             SELECT s.id, s.date, s.amount_paid as amount, 'sale' as type, 
                    c.name as party_name, p.name as product_name
             FROM sales s
             JOIN customers c ON s.customer_id = c.id
             JOIN products p ON s.product_id = p.id
-            WHERE s.payment_method = ? AND s.amount_paid > 0 AND s.voided = 0
+            WHERE s.payment_method = $1 AND s.amount_paid > 0 AND s.voided = 0
             ORDER BY s.date
-        `).all(account.type);
+        `, [account.type]);
+        const sales = salesResult.rows;
 
         sales.forEach(sale => {
             transactions.push({
@@ -48,15 +48,16 @@ router.get('/:id/transactions', (req, res) => {
         });
 
         // Get purchases with cash/bank payment
-        const purchases = db.prepare(`
+        const purchasesResult = await query(`
             SELECT p.id, p.date, p.amount_paid as amount, 'purchase' as type,
                    v.name as party_name, pr.name as product_name
             FROM purchases p
             JOIN vendors v ON p.vendor_id = v.id
             JOIN products pr ON p.product_id = pr.id
-            WHERE p.payment_method = ? AND p.amount_paid > 0 AND p.voided = 0
+            WHERE p.payment_method = $1 AND p.amount_paid > 0 AND p.voided = 0
             ORDER BY p.date
-        `).all(account.type);
+        `, [account.type]);
+        const purchases = purchasesResult.rows;
 
         purchases.forEach(purchase => {
             transactions.push({
@@ -67,7 +68,7 @@ router.get('/:id/transactions', (req, res) => {
         });
 
         // Get regular payments
-        const payments = db.prepare(`
+        const paymentsResult = await query(`
             SELECT p.id, p.date, p.amount, p.direction, p.party_type, p.notes,
                    CASE 
                        WHEN p.party_type = 'customer' THEN c.name
@@ -76,9 +77,10 @@ router.get('/:id/transactions', (req, res) => {
             FROM payments p
             LEFT JOIN customers c ON p.party_type = 'customer' AND p.party_id = c.id
             LEFT JOIN vendors v ON p.party_type = 'vendor' AND p.party_id = v.id
-            WHERE p.method = ? AND p.voided = 0
+            WHERE p.method = $1 AND p.voided = 0
             ORDER BY p.date
-        `).all(account.type);
+        `, [account.type]);
+        const payments = paymentsResult.rows;
 
         payments.forEach(payment => {
             transactions.push({

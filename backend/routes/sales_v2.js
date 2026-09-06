@@ -1,334 +1,124 @@
 const express = require('express');
-const { getDatabase } = require('../database/connection');
+const { query, withTransaction } = require('../database/postgres');
 const AccountingService = require('../services/accountingService');
 const { generateSaleId } = require('../utils/idGenerator');
 
 const router = express.Router();
 
-// Get all sales
-router.get('/', (req, res) => {
+const saleDetails = `
+    SELECT s.*, c.name AS customer_name, c.customer_id,
+           c.phone AS customer_phone, c.address AS customer_address,
+           c.current_balance AS customer_balance,
+           p.name AS product_name, p.product_id
+    FROM sales s
+    JOIN customers c ON s.customer_id = c.id
+    JOIN products p ON s.product_id = p.id
+`;
+
+router.get('/', async (req, res) => {
     try {
-        const { status } = req.query;
-        const db = getDatabase();
-        
-        let query = `
-            SELECT s.*, c.name as customer_name, c.customer_id, c.current_balance as customer_balance,
-                   p.name as product_name, p.product_id
-            FROM sales s
-            JOIN customers c ON s.customer_id = c.id
-            JOIN products p ON s.product_id = p.id
-            WHERE 1=1
-        `;
         const params = [];
-
-        if (status) {
-            query += ' AND s.status = ?';
-            params.push(status);
+        let sql = `${saleDetails} WHERE 1 = 1`;
+        if (req.query.status) {
+            params.push(req.query.status);
+            sql += ` AND s.status = $${params.length}`;
         }
-
-        query += ' ORDER BY s.date DESC, s.id DESC';
-
-        const sales = db.prepare(query).all(...params);
-        res.json(sales);
+        sql += ' ORDER BY s.date DESC, s.id DESC';
+        res.json((await query(sql, params)).rows);
     } catch (error) {
         console.error('Error fetching sales:', error);
         res.status(500).json({ error: 'Failed to fetch sales' });
     }
 });
 
-// Get sale by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
-        const db = getDatabase();
-        const sale = db.prepare(`
-            SELECT s.*, c.name as customer_name, c.customer_id, c.phone as customer_phone, 
-                   c.address as customer_address, c.current_balance as customer_balance,
-                   p.name as product_name, p.product_id
-            FROM sales s
-            JOIN customers c ON s.customer_id = c.id
-            JOIN products p ON s.product_id = p.id
-            WHERE s.id = ?
-        `).get(req.params.id);
-        
-        if (!sale) {
-            return res.status(404).json({ error: 'Sale not found' });
-        }
-        
+        const sale = (await query(`${saleDetails} WHERE s.id = $1`, [req.params.id])).rows[0];
+        if (!sale) return res.status(404).json({ error: 'Sale not found' });
         res.json(sale);
     } catch (error) {
-        console.error('Error fetching sale:', error);
         res.status(500).json({ error: 'Failed to fetch sale' });
     }
 });
 
-// Create sale (Draft)
-router.post('/', (req, res) => {
-    const db = getDatabase();
-    
+router.post('/', async (req, res) => {
     try {
         const { customer_id, product_id, qty_kg, rate, amount_paid = 0, payment_method = 'none', date, notes } = req.body;
-
-        // Validation
-        if (!customer_id || !product_id || !qty_kg || !rate || !date) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
-
-        if (qty_kg <= 0 || rate <= 0) {
-            return res.status(400).json({ error: 'Quantity and rate must be positive' });
-        }
-
-        const total = qty_kg * rate;
-
-        if (amount_paid < 0 || amount_paid > total) {
-            return res.status(400).json({ error: 'Invalid payment amount' });
-        }
-
-        // Check product stock
-        const product = db.prepare('SELECT current_stock, product_id, name FROM products WHERE id = ?').get(product_id);
-        if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
-        }
-
-        if (product.current_stock < qty_kg) {
-            return res.status(400).json({ 
-                error: 'Insufficient stock', 
-                available: product.current_stock,
-                required: qty_kg 
-            });
-        }
-
-        // Check customer exists
-        const customer = db.prepare('SELECT id, customer_id, name, current_balance FROM customers WHERE id = ?').get(customer_id);
-        if (!customer) {
-            return res.status(404).json({ error: 'Customer not found' });
-        }
-
-        // Generate sale ID
-        const saleId = generateSaleId();
-
-        // Insert sale as DRAFT
-        const result = db.prepare(`
+        if (!customer_id || !product_id || !qty_kg || !rate || !date) return res.status(400).json({ error: 'Missing required fields' });
+        if (qty_kg <= 0 || rate <= 0) return res.status(400).json({ error: 'Quantity and rate must be positive' });
+        const total = Number(qty_kg) * Number(rate);
+        if (amount_paid < 0 || amount_paid > total) return res.status(400).json({ error: 'Invalid payment amount' });
+        const product = (await query('SELECT current_stock FROM products WHERE id = $1', [product_id])).rows[0];
+        if (!product) return res.status(404).json({ error: 'Product not found' });
+        if (Number(product.current_stock) < Number(qty_kg)) return res.status(400).json({ error: 'Insufficient stock', available: product.current_stock, required: qty_kg });
+        if (!(await query('SELECT id FROM customers WHERE id = $1', [customer_id])).rows[0]) return res.status(404).json({ error: 'Customer not found' });
+        const saleId = await generateSaleId();
+        const result = await query(`
             INSERT INTO sales (sale_id, customer_id, product_id, qty_kg, rate, total, amount_paid, payment_method, date, notes, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
-        `).run(saleId, customer_id, product_id, qty_kg, rate, total, amount_paid, payment_method, date, notes);
-
-        // Fetch created sale with details
-        const sale = db.prepare(`
-            SELECT s.*, c.name as customer_name, c.customer_id, c.current_balance as customer_balance,
-                   p.name as product_name, p.product_id
-            FROM sales s
-            JOIN customers c ON s.customer_id = c.id
-            JOIN products p ON s.product_id = p.id
-            WHERE s.id = ?
-        `).get(result.lastInsertRowid);
-
-        res.status(201).json({
-            ...sale,
-            message: 'Sale created as draft. Click Approve to finalize.'
-        });
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'draft') RETURNING id
+        `, [saleId, customer_id, product_id, qty_kg, rate, total, amount_paid, payment_method, date, notes]);
+        const sale = (await query(`${saleDetails} WHERE s.id = $1`, [result.rows[0].id])).rows[0];
+        res.status(201).json({ ...sale, message: 'Sale created as draft. Click Approve to finalize.' });
     } catch (error) {
         console.error('Error creating sale:', error);
         res.status(500).json({ error: 'Failed to create sale', message: error.message });
     }
 });
 
-// Approve sale
-router.post('/:id/approve', (req, res) => {
-    const db = getDatabase();
-    
+router.post('/:id/approve', async (req, res) => {
     try {
-        const saleId = req.params.id;
-        const userId = req.session.userId;
-
-        // Get sale details
-        const sale = db.prepare('SELECT * FROM sales WHERE id = ? AND status = ?')
-            .get(saleId, 'draft');
-
-        if (!sale) {
-            return res.status(404).json({ error: 'Sale not found or already approved' });
-        }
-
-        // Check stock again before approval
-        const product = db.prepare('SELECT current_stock FROM products WHERE id = ?').get(sale.product_id);
-        if (product.current_stock < sale.qty_kg) {
-            return res.status(400).json({ 
-                error: 'Insufficient stock for approval',
-                available: product.current_stock,
-                required: sale.qty_kg
-            });
-        }
-
-        // Start transaction
-        const transaction = db.transaction(() => {
-            // Update sale status
-            db.prepare(`
-                UPDATE sales 
-                SET status = 'approved', approved_at = CURRENT_TIMESTAMP, approved_by = ?,
-                    updated_at = CURRENT_TIMESTAMP 
-                WHERE id = ?
-            `).run(userId, saleId);
-
-            // Update product stock
-            AccountingService.updateProductAfterSale(sale.product_id, sale.qty_kg);
-
-            // Update customer balance (receivable)
-            const unpaidAmount = sale.total - sale.amount_paid;
-            if (unpaidAmount > 0) {
-                AccountingService.updateCustomerBalance(sale.customer_id, unpaidAmount, 'add');
-            }
-
-            // Update cash/bank balance if payment made
-            if (sale.amount_paid > 0 && sale.payment_method !== 'none') {
-                const accountType = sale.payment_method === 'cash' ? 'cash' : 'bank';
-                AccountingService.updateAccountBalance(accountType, sale.amount_paid, 'add');
-            }
-
-            // Record ledger entries
-            AccountingService.recordSale(sale, saleId);
+        const sale = (await query('SELECT * FROM sales WHERE id = $1 AND status = $2', [req.params.id, 'draft'])).rows[0];
+        if (!sale) return res.status(404).json({ error: 'Sale not found or already approved' });
+        const product = (await query('SELECT current_stock FROM products WHERE id = $1', [sale.product_id])).rows[0];
+        if (Number(product.current_stock) < Number(sale.qty_kg)) return res.status(400).json({ error: 'Insufficient stock for approval', available: product.current_stock, required: sale.qty_kg });
+        await withTransaction(async (client) => {
+            await client.query(`UPDATE sales SET status = 'approved', approved_at = CURRENT_TIMESTAMP, approved_by = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [req.user?.id || null, req.params.id]);
+            await AccountingService.updateProductAfterSale(sale.product_id, sale.qty_kg, client);
+            const unpaid = Number(sale.total) - Number(sale.amount_paid);
+            if (unpaid > 0) await AccountingService.updateCustomerBalance(sale.customer_id, unpaid, 'add', client);
+            if (Number(sale.amount_paid) > 0 && sale.payment_method !== 'none') await AccountingService.updateAccountBalance(sale.payment_method === 'cash' ? 'cash' : 'bank', sale.amount_paid, 'add', client);
+            await AccountingService.recordSale(sale, sale.id, client);
         });
-
-        transaction();
-
-        // Fetch updated sale
-        const updated = db.prepare(`
-            SELECT s.*, c.name as customer_name, p.name as product_name
-            FROM sales s
-            JOIN customers c ON s.customer_id = c.id
-            JOIN products p ON s.product_id = p.id
-            WHERE s.id = ?
-        `).get(saleId);
-
-        res.json({
-            ...updated,
-            message: 'Sale approved successfully'
-        });
+        const updated = (await query(`${saleDetails} WHERE s.id = $1`, [req.params.id])).rows[0];
+        res.json({ ...updated, message: 'Sale approved successfully' });
     } catch (error) {
         console.error('Error approving sale:', error);
         res.status(500).json({ error: 'Failed to approve sale', message: error.message });
     }
 });
 
-// Update sale (only if draft)
-router.put('/:id', (req, res) => {
-    const db = getDatabase();
-    
+router.put('/:id', async (req, res) => {
     try {
-        const saleId = req.params.id;
-        
-        // Check if sale exists and is draft
-        const existing = db.prepare('SELECT * FROM sales WHERE id = ? AND status = ?')
-            .get(saleId, 'draft');
-
-        if (!existing) {
-            return res.status(404).json({ error: 'Sale not found or cannot be edited' });
-        }
-
+        const existing = (await query('SELECT * FROM sales WHERE id = $1 AND status = $2', [req.params.id, 'draft'])).rows[0];
+        if (!existing) return res.status(404).json({ error: 'Sale not found or cannot be edited' });
         const { customer_id, product_id, qty_kg, rate, amount_paid, payment_method, date, notes } = req.body;
-
-        // Calculate total
-        const total = (qty_kg || existing.qty_kg) * (rate || existing.rate);
-
-        // Check stock if product or quantity changed
-        if (product_id && product_id !== existing.product_id || qty_kg && qty_kg !== existing.qty_kg) {
-            const product = db.prepare('SELECT current_stock FROM products WHERE id = ?')
-                .get(product_id || existing.product_id);
-            
-            if (product && product.current_stock < (qty_kg || existing.qty_kg)) {
-                return res.status(400).json({ 
-                    error: 'Insufficient stock',
-                    available: product.current_stock 
-                });
-            }
-        }
-
-        db.prepare(`
-            UPDATE sales 
-            SET customer_id = ?, product_id = ?, qty_kg = ?, rate = ?, total = ?,
-                amount_paid = ?, payment_method = ?, date = ?, notes = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `).run(
-            customer_id || existing.customer_id,
-            product_id || existing.product_id,
-            qty_kg || existing.qty_kg,
-            rate || existing.rate,
-            total,
-            amount_paid !== undefined ? amount_paid : existing.amount_paid,
-            payment_method || existing.payment_method,
-            date || existing.date,
-            notes || existing.notes,
-            saleId
-        );
-
-        const updated = db.prepare(`
-            SELECT s.*, c.name as customer_name, p.name as product_name
-            FROM sales s
-            JOIN customers c ON s.customer_id = c.id
-            JOIN products p ON s.product_id = p.id
-            WHERE s.id = ?
-        `).get(saleId);
-
-        res.json(updated);
+        const values = [customer_id || existing.customer_id, product_id || existing.product_id, qty_kg || existing.qty_kg, rate || existing.rate];
+        const total = Number(values[2]) * Number(values[3]);
+        const updated = await query(`UPDATE sales SET customer_id = $1, product_id = $2, qty_kg = $3, rate = $4, total = $5, amount_paid = $6, payment_method = $7, date = $8, notes = $9, updated_at = CURRENT_TIMESTAMP WHERE id = $10 RETURNING id`, [...values, total, amount_paid ?? existing.amount_paid, payment_method || existing.payment_method, date || existing.date, notes ?? existing.notes, req.params.id]);
+        res.json((await query(`${saleDetails} WHERE s.id = $1`, [updated.rows[0].id])).rows[0]);
     } catch (error) {
-        console.error('Error updating sale:', error);
         res.status(500).json({ error: 'Failed to update sale' });
     }
 });
 
-// Delete/Void sale
-router.delete('/:id', (req, res) => {
-    const db = getDatabase();
-    
+router.delete('/:id', async (req, res) => {
     try {
-        const saleId = req.params.id;
-        
-        const sale = db.prepare('SELECT * FROM sales WHERE id = ?').get(saleId);
-        
-        if (!sale) {
-            return res.status(404).json({ error: 'Sale not found' });
-        }
-
+        const sale = (await query('SELECT * FROM sales WHERE id = $1', [req.params.id])).rows[0];
+        if (!sale) return res.status(404).json({ error: 'Sale not found' });
         if (sale.status === 'draft') {
-            // If draft, permanently delete
-            db.prepare('DELETE FROM sales WHERE id = ?').run(saleId);
-            res.json({ message: 'Draft sale deleted successfully' });
-        } else if (sale.status === 'approved') {
-            // If approved, void it and reverse accounting
-            const transaction = db.transaction(() => {
-                // Mark as voided
-                db.prepare(`
-                    UPDATE sales 
-                    SET status = 'voided', updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = ?
-                `).run(saleId);
-
-                // Restore stock
-                AccountingService.updateProductAfterPurchase(
-                    sale.product_id,
-                    sale.qty_kg,
-                    0 // Don't affect average cost when restoring
-                );
-
-                // Reverse customer balance
-                const unpaidAmount = sale.total - sale.amount_paid;
-                if (unpaidAmount > 0) {
-                    AccountingService.updateCustomerBalance(sale.customer_id, unpaidAmount, 'subtract');
-                }
-
-                // Reverse cash/bank
-                if (sale.amount_paid > 0 && sale.payment_method !== 'none') {
-                    const accountType = sale.payment_method === 'cash' ? 'cash' : 'bank';
-                    AccountingService.updateAccountBalance(accountType, sale.amount_paid, 'subtract');
-                }
-            });
-
-            transaction();
-            res.json({ message: 'Sale voided successfully' });
-        } else {
-            res.status(400).json({ error: 'Sale already voided' });
+            await query('DELETE FROM sales WHERE id = $1', [req.params.id]);
+            return res.json({ message: 'Draft sale deleted successfully' });
         }
+        if (sale.status !== 'approved') return res.status(400).json({ error: 'Sale already voided' });
+        await withTransaction(async (client) => {
+            await client.query(`UPDATE sales SET status = 'voided', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [req.params.id]);
+            await AccountingService.updateProductAfterPurchase(sale.product_id, sale.qty_kg, 0, client);
+            const unpaid = Number(sale.total) - Number(sale.amount_paid);
+            if (unpaid > 0) await AccountingService.updateCustomerBalance(sale.customer_id, unpaid, 'subtract', client);
+            if (Number(sale.amount_paid) > 0 && sale.payment_method !== 'none') await AccountingService.updateAccountBalance(sale.payment_method === 'cash' ? 'cash' : 'bank', sale.amount_paid, 'subtract', client);
+        });
+        res.json({ message: 'Sale voided successfully' });
     } catch (error) {
-        console.error('Error deleting sale:', error);
         res.status(500).json({ error: 'Failed to delete sale' });
     }
 });

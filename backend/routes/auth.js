@@ -1,14 +1,14 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { getDatabase } = require('../database/connection');
+const { query } = require('../database/postgres');
 
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -16,8 +16,8 @@ router.post('/login', (req, res) => {
             return res.status(400).json({ error: 'Username and password required' });
         }
 
-        const db = getDatabase();
-        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+        const result = await query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
 
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });

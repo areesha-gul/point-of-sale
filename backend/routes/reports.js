@@ -1,13 +1,12 @@
 const express = require('express');
-const { getDatabase } = require('../database/connection');
+const { query: dbQuery } = require('../database/postgres');
 
 const router = express.Router();
 
 // Sales report
-router.get('/sales', (req, res) => {
+router.get('/sales', async (req, res) => {
     try {
         const { startDate, endDate, customerId, productId } = req.query;
-        const db = getDatabase();
 
         let query = `
             SELECT s.*, c.name as customer_name, p.name as product_name
@@ -19,32 +18,32 @@ router.get('/sales', (req, res) => {
         const params = [];
 
         if (startDate) {
-            query += ' AND s.date >= ?';
+            query += ` AND s.date >= $${params.length + 1}`;
             params.push(startDate);
         }
         if (endDate) {
-            query += ' AND s.date <= ?';
+            query += ` AND s.date <= $${params.length + 1}`;
             params.push(endDate);
         }
         if (customerId) {
-            query += ' AND s.customer_id = ?';
+            query += ` AND s.customer_id = $${params.length + 1}`;
             params.push(customerId);
         }
         if (productId) {
-            query += ' AND s.product_id = ?';
+            query += ` AND s.product_id = $${params.length + 1}`;
             params.push(productId);
         }
 
         query += ' ORDER BY s.date DESC';
 
-        const sales = db.prepare(query).all(...params);
+        const sales = (await dbQuery(query, params)).rows;
 
         // Calculate summary
         const summary = {
-            totalSales: sales.reduce((sum, s) => sum + s.total, 0),
-            totalQuantity: sales.reduce((sum, s) => sum + s.qty_kg, 0),
-            totalReceived: sales.reduce((sum, s) => sum + s.amount_paid, 0),
-            totalPending: sales.reduce((sum, s) => sum + (s.total - s.amount_paid), 0),
+            totalSales: sales.reduce((sum, s) => sum + Number(s.total), 0),
+            totalQuantity: sales.reduce((sum, s) => sum + Number(s.qty_kg), 0),
+            totalReceived: sales.reduce((sum, s) => sum + Number(s.amount_paid), 0),
+            totalPending: sales.reduce((sum, s) => sum + Number(s.total) - Number(s.amount_paid), 0),
             transactionCount: sales.length
         };
 
@@ -56,10 +55,9 @@ router.get('/sales', (req, res) => {
 });
 
 // Purchase report
-router.get('/purchases', (req, res) => {
+router.get('/purchases', async (req, res) => {
     try {
         const { startDate, endDate, vendorId, productId } = req.query;
-        const db = getDatabase();
 
         let query = `
             SELECT p.*, v.name as vendor_name, pr.name as product_name
@@ -71,32 +69,32 @@ router.get('/purchases', (req, res) => {
         const params = [];
 
         if (startDate) {
-            query += ' AND p.date >= ?';
+            query += ` AND p.date >= $${params.length + 1}`;
             params.push(startDate);
         }
         if (endDate) {
-            query += ' AND p.date <= ?';
+            query += ` AND p.date <= $${params.length + 1}`;
             params.push(endDate);
         }
         if (vendorId) {
-            query += ' AND p.vendor_id = ?';
+            query += ` AND p.vendor_id = $${params.length + 1}`;
             params.push(vendorId);
         }
         if (productId) {
-            query += ' AND p.product_id = ?';
+            query += ` AND p.product_id = $${params.length + 1}`;
             params.push(productId);
         }
 
         query += ' ORDER BY p.date DESC';
 
-        const purchases = db.prepare(query).all(...params);
+        const purchases = (await dbQuery(query, params)).rows;
 
         // Calculate summary
         const summary = {
-            totalPurchases: purchases.reduce((sum, p) => sum + p.total, 0),
-            totalQuantity: purchases.reduce((sum, p) => sum + p.qty_kg, 0),
-            totalPaid: purchases.reduce((sum, p) => sum + p.amount_paid, 0),
-            totalPending: purchases.reduce((sum, p) => sum + (p.total - p.amount_paid), 0),
+            totalPurchases: purchases.reduce((sum, p) => sum + Number(p.total), 0),
+            totalQuantity: purchases.reduce((sum, p) => sum + Number(p.qty_kg), 0),
+            totalPaid: purchases.reduce((sum, p) => sum + Number(p.amount_paid), 0),
+            totalPending: purchases.reduce((sum, p) => sum + Number(p.total) - Number(p.amount_paid), 0),
             transactionCount: purchases.length
         };
 
@@ -108,29 +106,28 @@ router.get('/purchases', (req, res) => {
 });
 
 // Outstanding balances report
-router.get('/outstanding', (req, res) => {
+router.get('/outstanding', async (req, res) => {
     try {
-        const db = getDatabase();
 
         // Outstanding receivables (customers who owe money)
-        const receivables = db.prepare(`
+        const receivables = (await dbQuery(`
             SELECT id, name, phone, current_balance
             FROM customers
             WHERE current_balance > 0
             ORDER BY current_balance DESC
-        `).all();
+        `)).rows;
 
         // Outstanding payables (vendors we owe money to)
-        const payables = db.prepare(`
+        const payables = (await dbQuery(`
             SELECT id, name, phone, current_balance
             FROM vendors
             WHERE current_balance > 0
             ORDER BY current_balance DESC
-        `).all();
+        `)).rows;
 
         const summary = {
-            totalReceivables: receivables.reduce((sum, c) => sum + c.current_balance, 0),
-            totalPayables: payables.reduce((sum, v) => sum + v.current_balance, 0),
+            totalReceivables: receivables.reduce((sum, c) => sum + Number(c.current_balance), 0),
+            totalPayables: payables.reduce((sum, v) => sum + Number(v.current_balance), 0),
             receivableCount: receivables.length,
             payableCount: payables.length
         };
@@ -143,10 +140,9 @@ router.get('/outstanding', (req, res) => {
 });
 
 // Profit report (by product)
-router.get('/profit', (req, res) => {
+router.get('/profit', async (req, res) => {
     try {
         const { startDate, endDate, productId } = req.query;
-        const db = getDatabase();
 
         let query = `
             SELECT 
@@ -166,27 +162,27 @@ router.get('/profit', (req, res) => {
             query += ' WHERE 1=1';
             
             if (startDate) {
-                query += ' AND s.date >= ?';
+                query += ` AND s.date >= $${params.length + 1}`;
                 params.push(startDate);
             }
             if (endDate) {
-                query += ' AND s.date <= ?';
+                query += ` AND s.date <= $${params.length + 1}`;
                 params.push(endDate);
             }
             if (productId) {
-                query += ' AND p.id = ?';
+                query += ` AND p.id = $${params.length + 1}`;
                 params.push(productId);
             }
         }
 
         query += ' GROUP BY p.id, p.name, p.avg_cost ORDER BY gross_profit DESC';
 
-        const profitByProduct = db.prepare(query).all(...params);
+        const profitByProduct = (await dbQuery(query, params)).rows;
 
         const summary = {
-            totalRevenue: profitByProduct.reduce((sum, p) => sum + p.total_revenue, 0),
-            totalCost: profitByProduct.reduce((sum, p) => sum + p.total_cost, 0),
-            totalProfit: profitByProduct.reduce((sum, p) => sum + p.gross_profit, 0)
+            totalRevenue: profitByProduct.reduce((sum, p) => sum + Number(p.total_revenue), 0),
+            totalCost: profitByProduct.reduce((sum, p) => sum + Number(p.total_cost), 0),
+            totalProfit: profitByProduct.reduce((sum, p) => sum + Number(p.gross_profit), 0)
         };
 
         res.json({ profitByProduct, summary });
