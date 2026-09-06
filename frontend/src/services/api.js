@@ -118,7 +118,8 @@ export const reports = {
     getSales: (params) => api.get('/reports/sales', { params }),
     getPurchases: (params) => api.get('/reports/purchases', { params }),
     getOutstanding: () => api.get('/reports/outstanding'),
-    getProfit: (params) => api.get('/reports/profit', { params })
+    getProfit: (params) => api.get('/reports/profit', { params }),
+    downloadBackup: (params) => api.get('/reports/backup', { params, responseType: 'blob' })
 };
 
 // Accounts

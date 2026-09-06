@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
     ArrowLeftRight,
+    Archive,
     BarChart3,
     CreditCard,
     FileClock,
@@ -32,6 +33,7 @@ const additionalLinks = [
     { to: '/vendors', label: 'Vendors', icon: UserRound },
     { to: '/products', label: 'Products', icon: Package },
     { to: '/bank-accounts', label: 'Bank Accounts', icon: WalletCards },
+    { to: '/backups', label: 'Download Backup', icon: Archive },
     { to: '/reports/outstanding', label: 'Reports', icon: BarChart3 }
 ];
 

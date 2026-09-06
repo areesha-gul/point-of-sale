@@ -3,6 +3,53 @@ const { query: dbQuery } = require('../database/postgres');
 
 const router = express.Router();
 
+// Download a portable JSON backup of the business records.
+router.get('/backup', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const transactionTables = [
+            ['sales', 'date'],
+            ['purchases', 'date'],
+            ['payments', 'date'],
+            ['settlements', 'date'],
+            ['bank_transactions', 'date'],
+            ['ledger_entries', 'date']
+        ];
+        const backup = {
+            exportedAt: new Date().toISOString(),
+            period: { startDate: startDate || null, endDate: endDate || null },
+            customers: (await dbQuery('SELECT * FROM customers ORDER BY id')).rows,
+            vendors: (await dbQuery('SELECT * FROM vendors ORDER BY id')).rows,
+            products: (await dbQuery('SELECT * FROM products ORDER BY id')).rows,
+            accounts: (await dbQuery('SELECT * FROM cash_bank_accounts ORDER BY id')).rows,
+            transactions: {}
+        };
+
+        for (const [table, dateColumn] of transactionTables) {
+            const params = [];
+            const conditions = [];
+            if (startDate) {
+                params.push(startDate);
+                conditions.push(`${dateColumn} >= $${params.length}`);
+            }
+            if (endDate) {
+                params.push(endDate);
+                conditions.push(`${dateColumn} <= $${params.length}`);
+            }
+            const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
+            backup.transactions[table] = (await dbQuery(`SELECT * FROM ${table}${where} ORDER BY id`, params)).rows;
+        }
+
+        const filename = `pos-backup-${startDate || 'all'}-to-${endDate || 'all'}.json`;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.json(backup);
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        res.status(500).json({ error: 'Failed to create backup' });
+    }
+});
+
 // Sales report
 router.get('/sales', async (req, res) => {
     try {

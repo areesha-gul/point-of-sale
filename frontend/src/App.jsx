@@ -21,6 +21,7 @@ import SalesReport from './components/reports/SalesReport';
 import PurchaseReport from './components/reports/PurchaseReport';
 import OutstandingReport from './components/reports/OutstandingReport';
 import BankAccountList from './components/accounts/BankAccountList';
+import BackupDownload from './components/reports/BackupDownload';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -96,6 +97,7 @@ function App() {
           <Route index element={<DashboardEnhanced />} />
           <Route path="products" element={<ProductList />} />
           <Route path="bank-accounts" element={<BankAccountList />} />
+          <Route path="backups" element={<BackupDownload />} />
           <Route path="customers" element={<CustomerList />} />
           <Route path="customers/:id/ledger" element={<CustomerLedger />} />
           <Route path="vendors" element={<VendorList />} />
