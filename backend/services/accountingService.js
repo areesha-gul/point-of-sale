@@ -172,12 +172,14 @@ class AccountingService {
     /**
      * Update cash or bank account balance
      */
-    static async updateAccountBalance(accountType, amount, operation = 'add', client = null) {
+    static async updateAccountBalance(accountType, amount, operation = 'add', client = null, accountId = null) {
         const db = client || { query };
+        const condition = accountId ? 'id = $2' : 'type = $2';
+        const value = accountId || accountType;
         const sql = operation === 'add'
-            ? 'UPDATE cash_bank_accounts SET current_balance = current_balance + $1, updated_at = CURRENT_TIMESTAMP WHERE type = $2'
-            : 'UPDATE cash_bank_accounts SET current_balance = current_balance - $1, updated_at = CURRENT_TIMESTAMP WHERE type = $2';
-        await db.query(sql, [amount, accountType]);
+            ? `UPDATE cash_bank_accounts SET current_balance = current_balance + $1, updated_at = CURRENT_TIMESTAMP WHERE ${condition}`
+            : `UPDATE cash_bank_accounts SET current_balance = current_balance - $1, updated_at = CURRENT_TIMESTAMP WHERE ${condition}`;
+        await db.query(sql, [amount, value]);
     }
 }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { sales, customers, products } from '../../services/api';
+import { sales, customers, products, bankAccounts as bankAccountsApi } from '../../services/api';
 import { formatIndianCurrency, getTodayDate } from '../../services/formatter';
 
 export default function SaleFormComplete() {
@@ -10,6 +10,7 @@ export default function SaleFormComplete() {
     
     const [customerList, setCustomerList] = useState([]);
     const [productList, setProductList] = useState([]);
+    const [bankAccountList, setBankAccountList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -23,6 +24,7 @@ export default function SaleFormComplete() {
         freight_charges: '0',
         amount_paid: '0',
         payment_method: 'none',
+        bank_account_id: '',
         date: getTodayDate(),
         notes: ''
     });
@@ -44,13 +46,15 @@ export default function SaleFormComplete() {
 
     const loadData = async () => {
         try {
-            const [customersRes, productsRes] = await Promise.all([
+            const [customersRes, productsRes, accountsRes] = await Promise.all([
                 customers.getAll(),
-                products.getAll()
+                products.getAll(),
+                bankAccountsApi.getAll()
             ]);
             
             setCustomerList(customersRes.data);
             setProductList(productsRes.data);
+            setBankAccountList(accountsRes.data.filter(account => account.type === 'bank'));
         } catch (err) {
             setError('Failed to load data');
         } finally {
@@ -100,6 +104,7 @@ export default function SaleFormComplete() {
                 freight_charges: parseFloat(formData.freight_charges) || 0,
                 amount_paid: parseFloat(formData.amount_paid),
                 payment_method: formData.payment_method,
+                bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id) : null,
                 date: formData.date,
                 notes: formData.notes
             };
@@ -117,6 +122,7 @@ export default function SaleFormComplete() {
                 freight_charges: '0',
                 amount_paid: '0',
                 payment_method: 'none',
+                bank_account_id: '',
                 date: getTodayDate(),
                 notes: ''
             });
@@ -282,6 +288,14 @@ export default function SaleFormComplete() {
                             <option value="bank">Bank</option>
                         </select>
                     </div>
+
+                    {formData.payment_method === 'bank' && <div>
+                        <label className="label">Receiving Bank Account *</label>
+                        <select className="input select-input" value={formData.bank_account_id} onChange={(e) => setFormData({ ...formData, bank_account_id: e.target.value })} required>
+                            <option value="">Choose Bank Account...</option>
+                            {bankAccountList.map(account => <option key={account.id} value={account.id}>{account.name} - {account.bank_name || 'Bank'}</option>)}
+                        </select>
+                    </div>}
 
                     {/* Amount Received */}
                     <div>

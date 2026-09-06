@@ -26,6 +26,7 @@ async function initPostgres() {
 
     await pool.query(schema);
     await pool.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS freight_charges NUMERIC(15, 2) DEFAULT 0');
+    await pool.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS bank_account_id BIGINT REFERENCES cash_bank_accounts(id)');
     await pool.query(`
         INSERT INTO cash_bank_accounts
             (account_id, name, type, opening_balance, current_balance)

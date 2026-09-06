@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS sales (
     freight_charges NUMERIC(15, 2) DEFAULT 0,
     amount_paid NUMERIC(15, 2) DEFAULT 0,
     payment_method TEXT CHECK(payment_method IN ('cash', 'bank', 'none')),
+    bank_account_id BIGINT REFERENCES cash_bank_accounts(id),
     date DATE NOT NULL,
     notes TEXT,
     status TEXT DEFAULT 'draft' CHECK(status IN ('draft', 'approved', 'voided')),
