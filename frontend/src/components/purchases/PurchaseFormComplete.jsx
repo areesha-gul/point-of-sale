@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { purchases, vendors, products, bankAccounts } from '../../services/api';
+import { purchases, vendors, products, bankAccounts as bankAccountsApi } from '../../services/api';
 import { formatIndianCurrency, getTodayDate } from '../../services/formatter';
 
 export default function PurchaseFormComplete() {
@@ -56,7 +56,7 @@ export default function PurchaseFormComplete() {
         const results = await Promise.allSettled([
             vendors.getAll(),
             products.getAll(),
-            bankAccounts.getAll()
+            bankAccountsApi.getAll()
         ]);
         const warnings = [];
 
