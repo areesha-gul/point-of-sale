@@ -61,7 +61,7 @@ router.post('/:id/approve', async (req, res) => {
             await AccountingService.updateProductAfterPurchase(purchase.product_id, purchase.qty_kg, Number(purchase.grand_total) / Number(purchase.qty_kg), client);
             const unpaid = Number(purchase.grand_total) - Number(purchase.amount_paid);
             if (unpaid > 0) await AccountingService.updateVendorBalance(purchase.vendor_id, unpaid, 'add', client);
-            if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'subtract', client);
+            if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'subtract', client, purchase.bank_account_id);
             await AccountingService.recordPurchase(purchase, purchase.id, client);
         });
         res.json({ ...(await query(`${purchaseDetails} WHERE p.id = $1`, [req.params.id])).rows[0], message: 'Purchase approved successfully' });
@@ -93,7 +93,7 @@ router.delete('/:id', async (req, res) => {
             await AccountingService.updateProductAfterSale(purchase.product_id, purchase.qty_kg, client);
             const unpaid = Number(purchase.grand_total) - Number(purchase.amount_paid);
             if (unpaid > 0) await AccountingService.updateVendorBalance(purchase.vendor_id, unpaid, 'subtract', client);
-            if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'add', client);
+            if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'add', client, purchase.bank_account_id);
         });
         res.json({ message: 'Purchase voided successfully' });
     } catch (error) { res.status(500).json({ error: 'Failed to delete purchase' }); }

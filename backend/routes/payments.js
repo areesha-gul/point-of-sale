@@ -57,7 +57,7 @@ router.get('/:id', async (req, res) => {
 // Create payment
 router.post('/', async (req, res) => {
     try {
-        const { party_type, party_id, amount, method, direction, date, notes } = req.body;
+        const { party_type, party_id, amount, method, bank_account_id = null, direction, date, notes } = req.body;
 
         // Validation
         if (!party_type || !party_id || !amount || !method || !direction || !date) {
@@ -71,6 +71,9 @@ router.post('/', async (req, res) => {
         if (!['cash', 'bank'].includes(method)) {
             return res.status(400).json({ error: 'Invalid payment method' });
         }
+
+        if (method === 'bank' && !bank_account_id) return res.status(400).json({ error: 'Select the bank account used for this payment' });
+        if (bank_account_id && !(await query("SELECT id FROM cash_bank_accounts WHERE id = $1 AND type = 'bank' AND is_active = 1", [bank_account_id])).rows[0]) return res.status(400).json({ error: 'Selected bank account was not found' });
 
         if (!['in', 'out'].includes(direction)) {
             return res.status(400).json({ error: 'Invalid direction' });
@@ -95,7 +98,7 @@ router.post('/', async (req, res) => {
 
         // For outgoing payments, check if sufficient cash/bank balance
         if (direction === 'out') {
-            const accountResult = await query('SELECT current_balance FROM cash_bank_accounts WHERE type = $1', [method]);
+            const accountResult = await query('SELECT current_balance FROM cash_bank_accounts WHERE id = $1', [bank_account_id || 0]);
             const account = accountResult.rows[0];
             if (account && amount > account.current_balance) {
                 return res.status(400).json({ 
@@ -110,9 +113,9 @@ router.post('/', async (req, res) => {
             const generatedPaymentId = await generatePaymentId();
             // Insert payment
             const result = await client.query(`
-                INSERT INTO payments (payment_id, party_type, party_id, amount, method, direction, date, notes)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
-            `, [generatedPaymentId, party_type, party_id, amount, method, direction, date, notes]);
+                INSERT INTO payments (payment_id, party_type, party_id, amount, method, bank_account_id, direction, date, notes)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+            `, [generatedPaymentId, party_type, party_id, amount, method, bank_account_id, direction, date, notes]);
             const databasePaymentId = result.rows[0].id;
 
             // Update party balance
@@ -124,11 +127,7 @@ router.post('/', async (req, res) => {
 
             // Update cash/bank balance
             const accountType = method;
-            if (direction === 'in') {
-                await AccountingService.updateAccountBalance(accountType, amount, 'add', client);
-            } else {
-                await AccountingService.updateAccountBalance(accountType, amount, 'subtract', client);
-            }
+            await AccountingService.updateAccountBalance(accountType, amount, direction === 'in' ? 'add' : 'subtract', client, bank_account_id);
 
             // Record ledger entries
             await AccountingService.recordPayment(req.body, databasePaymentId, client);
@@ -164,7 +163,7 @@ router.delete('/:id', async (req, res) => {
         await withTransaction(async (client) => {
             if (payment.party_type === 'customer' && payment.direction === 'in') await AccountingService.updateCustomerBalance(payment.party_id, payment.amount, 'add', client);
             if (payment.party_type === 'vendor' && payment.direction === 'out') await AccountingService.updateVendorBalance(payment.party_id, payment.amount, 'add', client);
-            await AccountingService.updateAccountBalance(payment.method, payment.amount, payment.direction === 'in' ? 'subtract' : 'add', client);
+            await AccountingService.updateAccountBalance(payment.method, payment.amount, payment.direction === 'in' ? 'subtract' : 'add', client, payment.bank_account_id);
             await client.query("DELETE FROM ledger_entries WHERE ref_type = 'payment' AND ref_id = $1", [payment.id]);
             await client.query('DELETE FROM payments WHERE id = $1', [payment.id]);
         });

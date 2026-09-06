@@ -34,9 +34,10 @@ router.get('/:id/transactions', async (req, res) => {
             FROM sales s
             JOIN customers c ON s.customer_id = c.id
             JOIN products p ON s.product_id = p.id
-            WHERE s.payment_method = $1 AND s.amount_paid > 0 AND s.voided = 0
+                        WHERE s.payment_method = $1 AND s.amount_paid > 0 AND s.voided = 0
+                            AND (s.payment_method = 'cash' OR s.bank_account_id = $2)
             ORDER BY s.date
-        `, [account.type]);
+        `, [account.type, account.id]);
         const sales = salesResult.rows;
 
         sales.forEach(sale => {
@@ -54,9 +55,10 @@ router.get('/:id/transactions', async (req, res) => {
             FROM purchases p
             JOIN vendors v ON p.vendor_id = v.id
             JOIN products pr ON p.product_id = pr.id
-            WHERE p.payment_method = $1 AND p.amount_paid > 0 AND p.voided = 0
+                        WHERE p.payment_method = $1 AND p.amount_paid > 0 AND p.voided = 0
+                            AND (p.payment_method = 'cash' OR p.bank_account_id = $2)
             ORDER BY p.date
-        `, [account.type]);
+        `, [account.type, account.id]);
         const purchases = purchasesResult.rows;
 
         purchases.forEach(purchase => {
@@ -77,9 +79,10 @@ router.get('/:id/transactions', async (req, res) => {
             FROM payments p
             LEFT JOIN customers c ON p.party_type = 'customer' AND p.party_id = c.id
             LEFT JOIN vendors v ON p.party_type = 'vendor' AND p.party_id = v.id
-            WHERE p.method = $1 AND p.voided = 0
+                        WHERE p.method = $1 AND p.voided = 0
+                            AND (p.method = 'cash' OR p.bank_account_id = $2)
             ORDER BY p.date
-        `, [account.type]);
+        `, [account.type, account.id]);
         const payments = paymentsResult.rows;
 
         payments.forEach(payment => {

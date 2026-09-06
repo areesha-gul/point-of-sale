@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { bankAccounts } from '../../services/api';
-import { formatIndianCurrency } from '../../services/formatter';
+import { bankAccounts, accounts } from '../../services/api';
+import { formatIndianCurrency, formatDate } from '../../services/formatter';
 
 const initialForm = {
     name: '',
@@ -17,6 +17,7 @@ export default function BankAccountList() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [history, setHistory] = useState({});
 
     useEffect(() => {
         loadAccounts();
@@ -57,6 +58,17 @@ export default function BankAccountList() {
         if (!window.confirm(`Hide ${account.name}? Its transaction history will be kept.`)) return;
         try { await bankAccounts.remove(account.id); await loadAccounts(); }
         catch (err) { setError(err.response?.data?.error || 'Could not remove bank account'); }
+    };
+
+    const toggleHistory = async (account) => {
+        if (history[account.id]) {
+            setHistory({ ...history, [account.id]: null });
+            return;
+        }
+        try {
+            const response = await accounts.getTransactions(account.id);
+            setHistory({ ...history, [account.id]: response.data.transactions });
+        } catch (err) { setError('Could not load account history'); }
     };
 
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
@@ -120,8 +132,10 @@ export default function BankAccountList() {
                                 <p className="text-sm text-gray-600">Current balance</p>
                                 <p className="text-2xl font-bold text-blue-700">{formatIndianCurrency(account.current_balance)}</p>
                                 <button className="btn-danger mt-2 text-sm" onClick={() => handleDelete(account)}>Remove</button>
+                                <button className="btn-secondary mt-2 text-sm" onClick={() => toggleHistory(account)}>In / Out History</button>
                             </div>
                         </div>
+                        {history[account.id] && <div className="mt-4 border-t pt-3"><p className="mb-2 font-bold">Bank movements</p>{history[account.id].length === 0 ? <p className="text-sm text-gray-600">No movements yet.</p> : history[account.id].map((item, index) => <div className="flex justify-between border-b py-2 text-sm" key={`${item.id}-${index}`}><span>{formatDate(item.date)} - {item.description}</span><span className={item.direction === 'in' ? 'font-bold text-green-700' : 'font-bold text-red-700'}>{item.direction === 'in' ? '+' : '-'}{formatIndianCurrency(item.amount)}</span></div>)}</div>}
                     </div>
                 ))}
             </div>
