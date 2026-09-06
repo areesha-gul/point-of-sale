@@ -79,6 +79,7 @@ app.use('/api/vendors', authMiddleware, require('./routes/vendors'));
 app.use('/api/sales', authMiddleware, require('./routes/sales_v2'));
 app.use('/api/purchases', authMiddleware, require('./routes/purchases_v2'));
 app.use('/api/payments', authMiddleware, require('./routes/payments'));
+app.use('/api/profit-withdrawals', authMiddleware, require('./routes/profitWithdrawals'));
 app.use('/api/settlements', authMiddleware, require('./routes/settlements'));
 app.use('/api/dashboard', authMiddleware, require('./routes/dashboard'));
 app.use('/api/reports', authMiddleware, require('./routes/reports'));

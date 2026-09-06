@@ -143,6 +143,39 @@ router.get('/kpis', async (req, res) => {
         `, [firstDayOfMonth])).rows[0];
 
         const totalProfit = Number(mtdProfit.revenue) - Number(mtdProfit.cogs);
+        const profitSplit = {
+            istekhar: totalProfit * 2 / 5,
+            shaukat: totalProfit * 2 / 5,
+            bank: totalProfit / 5
+        };
+
+        // Get cumulative withdrawals (MTD) by recipient
+        const withdrawals = (await query(`
+            SELECT 
+                recipient,
+                COALESCE(SUM(amount), 0) as total_withdrawn
+            FROM profit_withdrawals
+            WHERE date >= $1
+            GROUP BY recipient
+        `, [firstDayOfMonth])).rows;
+
+        const withdrawalsByRecipient = {
+            istekhar: 0,
+            shaukat: 0,
+            bank: 0
+        };
+
+        withdrawals.forEach(w => {
+            const key = w.recipient.toLowerCase();
+            withdrawalsByRecipient[key] = Number(w.total_withdrawn);
+        });
+
+        // Calculate remaining amounts
+        const profitRemaining = {
+            istekhar: profitSplit.istekhar - withdrawalsByRecipient.istekhar,
+            shaukat: profitSplit.shaukat - withdrawalsByRecipient.shaukat,
+            bank: profitSplit.bank - withdrawalsByRecipient.bank
+        };
 
         // Pending approvals
         const pendingPurchases = (await query(`SELECT COUNT(*) as count FROM purchases WHERE status = 'draft'`)).rows[0].count;
@@ -154,6 +187,9 @@ router.get('/kpis', async (req, res) => {
             todaySaleCount: Number(todaySale.count),
             mtdSale: Number(mtdSale.total),
             totalProfit,
+            profitSplit,
+            profitWithdrawals: withdrawalsByRecipient,
+            profitRemaining,
             pendingPurchases,
             pendingSales,
             pendingPayments,
