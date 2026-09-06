@@ -101,7 +101,7 @@ export default function DashboardEnhanced() {
 
             <div className="card border-2 border-emerald-200 bg-emerald-50">
                 <h2 className="text-xl font-bold text-emerald-900">Profit division this month</h2>
-                <p className="mt-1 text-sm text-emerald-800">Total profit divided into 5 parts: Iftekhar Ahmad (2), Shaukat (2), Bank loan (1)</p>
+                <p className="mt-1 text-sm text-emerald-800">Total profit divided into 5 parts: Iftekhar Ahmad (2), Shaukat Rang Illahi (2), Bank loan (1)</p>
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                     <div className="rounded-lg bg-white p-4 border border-emerald-200">
                         <p className="font-semibold text-gray-700">Iftekhar Ahmad · 2/5 share</p>
@@ -112,11 +112,11 @@ export default function DashboardEnhanced() {
                         </div>
                     </div>
                     <div className="rounded-lg bg-white p-4 border border-emerald-200">
-                        <p className="font-semibold text-gray-700">Shaukat · 2/5 share</p>
-                        <p className="text-2xl font-bold text-emerald-700 mt-1">{formatIndianCurrency(kpis?.profitSplit?.shaukat || 0)}</p>
+                        <p className="font-semibold text-gray-700">Shaukat Rang Illahi · 2/5 share</p>
+                        <p className="text-2xl font-bold text-emerald-700 mt-1">{formatIndianCurrency(kpis?.profitSplit?.shaukat_rang_illahi || 0)}</p>
                         <div className="mt-2 pt-2 border-t border-emerald-100 text-sm">
-                            <p className="text-gray-600">Withdrawn: <span className="font-semibold text-red-600">{formatIndianCurrency(kpis?.profitWithdrawals?.shaukat || 0)}</span></p>
-                            <p className="text-gray-600 mt-1">Remaining: <span className="font-semibold text-blue-600">{formatIndianCurrency(kpis?.profitRemaining?.shaukat || 0)}</span></p>
+                            <p className="text-gray-600">Withdrawn: <span className="font-semibold text-red-600">{formatIndianCurrency(kpis?.profitWithdrawals?.shaukat_rang_illahi || 0)}</span></p>
+                            <p className="text-gray-600 mt-1">Remaining: <span className="font-semibold text-blue-600">{formatIndianCurrency(kpis?.profitRemaining?.shaukat_rang_illahi || 0)}</span></p>
                         </div>
                     </div>
                     <div className="rounded-lg bg-white p-4 border border-emerald-200">

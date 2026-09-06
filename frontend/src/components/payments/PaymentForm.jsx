@@ -137,7 +137,7 @@ export default function PaymentForm() {
                 <form onSubmit={handleSubmitProfit} className="card form-card mb-6 space-y-4">
                     <div className="bg-emerald-50 border border-emerald-200 rounded p-3 mb-4">
                         <p className="text-sm text-emerald-800">
-                            <strong>Profit Share:</strong> Iftekhar Ahmad (2/5), Shaukat (2/5), Bank loan (1/5). Partners can withdraw any amount - it doesn't have to match their share exactly.
+                            <strong>Profit Share:</strong> Iftekhar Ahmad (2/5), Shaukat Rang Illahi (2/5), Bank loan (1/5). Partners can withdraw any amount - it doesn't have to match their share exactly.
                         </p>
                     </div>
                     <div className="form-grid grid-cols-1 md:grid-cols-2">
@@ -145,7 +145,7 @@ export default function PaymentForm() {
                             <label className="label">Recipient *</label>
                             <select className="input select-input" value={profitFormData.recipient} onChange={e => setProfitFormData({ ...profitFormData, recipient: e.target.value })} required>
                                 <option value="Iftekhar Ahmad">Iftekhar Ahmad (2/5 share)</option>
-                                <option value="Shaukat">Shaukat (2/5 share)</option>
+                                <option value="Shaukat Rang Illahi">Shaukat Rang Illahi (2/5 share)</option>
                                 <option value="Bank">Bank Loan Payment (1/5 share)</option>
                             </select>
                         </div>

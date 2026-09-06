@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { recipient, amount, method, bank_account_id = null, date, notes } = req.body;
-        if (!['Iftekhar Ahmad', 'Shaukat', 'Bank'].includes(recipient) || !amount || !method || !date) return res.status(400).json({ error: 'Recipient, amount, method, and date are required' });
+        if (!['Iftekhar Ahmad', 'Shaukat Rang Illahi', 'Bank'].includes(recipient) || !amount || !method || !date) return res.status(400).json({ error: 'Recipient, amount, method, and date are required' });
         if (!['cash', 'bank'].includes(method) || Number(amount) <= 0) return res.status(400).json({ error: 'Enter a valid amount and method' });
         if (method === 'bank' && !bank_account_id) return res.status(400).json({ error: 'Select the bank account used for this withdrawal' });
         if (bank_account_id && !(await query("SELECT id FROM cash_bank_accounts WHERE id = $1 AND type = 'bank' AND is_active = 1", [bank_account_id])).rows[0]) return res.status(400).json({ error: 'Selected bank account was not found' });
