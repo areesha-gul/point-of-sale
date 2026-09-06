@@ -56,17 +56,17 @@ export default function PurchaseFormComplete() {
         ]);
         const warnings = [];
 
-        if (results[0].status === 'fulfilled') {
+        if (results[0].status === 'fulfilled' && Array.isArray(results[0].value.data)) {
             setVendorList(results[0].value.data);
         } else {
             warnings.push('Vendors could not be loaded.');
         }
-        if (results[1].status === 'fulfilled') {
+        if (results[1].status === 'fulfilled' && Array.isArray(results[1].value.data)) {
             setProductList(results[1].value.data);
         } else {
             warnings.push('Products could not be loaded.');
         }
-        if (results[2].status === 'fulfilled') {
+        if (results[2].status === 'fulfilled' && Array.isArray(results[2].value.data)) {
             setBankAccounts(results[2].value.data);
         } else {
             warnings.push('Bank accounts could not be loaded.');
@@ -158,15 +158,12 @@ export default function PurchaseFormComplete() {
         }
     };
 
-    if (loading) {
-        return <div className="text-center text-2xl">Loading...</div>;
-    }
-
     return (
         <div className="page-shell">
             <div className="mb-6">
             <h1 className="page-title">New Purchase</h1>
             <p className="page-help">Choose the vendor, product, quantity, and price.</p>
+            {loading && <p className="mt-2 text-sm text-blue-700">Loading your vendors and products...</p>}
             </div>
 
             {error && (

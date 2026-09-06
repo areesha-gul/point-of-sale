@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // Use environment variable for API URL
 // In production (Vercel), this MUST be set to your Render backend URL
-const baseURL = import.meta.env.VITE_API_URL || '/api';
+const baseURL = import.meta.env.VITE_API_URL || (
+    import.meta.env.DEV ? '/api' : 'https://pos-backend-ig4w.onrender.com/api'
+);
 
 if (!baseURL) {
     console.error('VITE_API_URL is not set! API calls will fail.');
