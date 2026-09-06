@@ -39,7 +39,8 @@ router.post('/', async (req, res) => {
         if (!(await query('SELECT id FROM products WHERE id = $1', [product_id])).rows[0]) return res.status(404).json({ error: 'Product not found' });
         if (!(await query('SELECT id FROM vendors WHERE id = $1', [vendor_id])).rows[0]) return res.status(404).json({ error: 'Vendor not found' });
         const total = Number(qty_kg) * Number(rate);
-        const grandTotal = total + Number(freight_charges) + Number(other_charges);
+        const grandTotal = total - Number(freight_charges) + Number(other_charges);
+        if (grandTotal < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
         if (amount_paid < 0 || amount_paid > grandTotal) return res.status(400).json({ error: 'Payment amount cannot exceed grand total' });
         const purchaseId = await generatePurchaseId();
         const result = await query(`
@@ -74,7 +75,8 @@ router.put('/:id', async (req, res) => {
         const { vendor_id, product_id, qty_kg, rate, freight_charges, other_charges, amount_paid, payment_method, bank_account_id, date, notes, is_direct_delivery } = req.body;
         const qty = qty_kg ?? existing.qty_kg; const unitRate = rate ?? existing.rate;
         const freight = freight_charges ?? existing.freight_charges; const other = other_charges ?? existing.other_charges;
-        const total = Number(qty) * Number(unitRate); const grandTotal = total + Number(freight) + Number(other);
+        const total = Number(qty) * Number(unitRate); const grandTotal = total - Number(freight) + Number(other);
+        if (grandTotal < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
         const result = await query(`UPDATE purchases SET vendor_id = $1, product_id = $2, qty_kg = $3, rate = $4, total = $5, freight_charges = $6, other_charges = $7, grand_total = $8, amount_paid = $9, payment_method = $10, bank_account_id = $11, date = $12, notes = $13, is_direct_delivery = $14, updated_at = CURRENT_TIMESTAMP WHERE id = $15 RETURNING id`, [vendor_id ?? existing.vendor_id, product_id ?? existing.product_id, qty, unitRate, total, freight, other, grandTotal, amount_paid ?? existing.amount_paid, payment_method || existing.payment_method, bank_account_id ?? existing.bank_account_id, date || existing.date, notes ?? existing.notes, is_direct_delivery ?? existing.is_direct_delivery, req.params.id]);
         res.json((await query(`${purchaseDetails} WHERE p.id = $1`, [result.rows[0].id])).rows[0]);
     } catch (error) { res.status(500).json({ error: 'Failed to update purchase' }); }

@@ -64,7 +64,7 @@ export default function SaleFormComplete() {
         const freight = parseFloat(formData.freight_charges) || 0;
         const paid = parseFloat(formData.amount_paid) || 0;
 
-        const total = qty * rate + freight;
+        const total = Math.max(0, qty * rate - freight);
         const remaining_receivable = total - paid;
 
         setCalculatedTotals({ total, remaining_receivable });

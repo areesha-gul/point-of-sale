@@ -88,7 +88,7 @@ export default function PurchaseFormComplete() {
         const paid = parseFloat(formData.amount_paid) || 0;
 
         const total = qty * rate;
-        const grand_total = total + freight + other;
+        const grand_total = Math.max(0, total - freight + other);
         const remaining_payable = grand_total - paid;
 
         setCalculatedTotals({ total, grand_total, remaining_payable });
@@ -324,7 +324,7 @@ export default function PurchaseFormComplete() {
 
                 {/* Grand Total */}
                 <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
-                    <p className="text-lg font-medium">Grand Total (Product + Freight + Other)</p>
+                    <p className="text-lg font-medium">Grand Total (Product - Freight + Other)</p>
                     <p className="text-3xl font-bold text-blue-700">
                         {formatIndianCurrency(calculatedTotals.grand_total)}
                     </p>

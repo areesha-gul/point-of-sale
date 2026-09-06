@@ -46,7 +46,8 @@ router.post('/', async (req, res) => {
         const { customer_id, product_id, qty_kg, rate, freight_charges = 0, amount_paid = 0, payment_method = 'none', date, notes } = req.body;
         if (!customer_id || !product_id || !qty_kg || !rate || !date) return res.status(400).json({ error: 'Missing required fields' });
         if (qty_kg <= 0 || rate <= 0) return res.status(400).json({ error: 'Quantity and rate must be positive' });
-        const total = Number(qty_kg) * Number(rate) + Number(freight_charges);
+        const total = Number(qty_kg) * Number(rate) - Number(freight_charges);
+        if (total < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
         if (amount_paid < 0 || amount_paid > total) return res.status(400).json({ error: 'Invalid payment amount' });
         const product = (await query('SELECT current_stock FROM products WHERE id = $1', [product_id])).rows[0];
         if (!product) return res.status(404).json({ error: 'Product not found' });
@@ -94,7 +95,8 @@ router.put('/:id', async (req, res) => {
         const { customer_id, product_id, qty_kg, rate, freight_charges, amount_paid, payment_method, date, notes } = req.body;
         const values = [customer_id || existing.customer_id, product_id || existing.product_id, qty_kg || existing.qty_kg, rate || existing.rate];
         const freight = freight_charges ?? existing.freight_charges ?? 0;
-        const total = Number(values[2]) * Number(values[3]) + Number(freight);
+        const total = Number(values[2]) * Number(values[3]) - Number(freight);
+        if (total < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
         const updated = await query(`UPDATE sales SET customer_id = $1, product_id = $2, qty_kg = $3, rate = $4, total = $5, freight_charges = $6, amount_paid = $7, payment_method = $8, date = $9, notes = $10, updated_at = CURRENT_TIMESTAMP WHERE id = $11 RETURNING id`, [...values, total, freight, amount_paid ?? existing.amount_paid, payment_method || existing.payment_method, date || existing.date, notes ?? existing.notes, req.params.id]);
         res.json((await query(`${saleDetails} WHERE s.id = $1`, [updated.rows[0].id])).rows[0]);
     } catch (error) {
