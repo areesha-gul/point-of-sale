@@ -64,6 +64,10 @@ async function generateDeliveryId() {
     return generateFormattedId('DD', 'direct_deliveries', 'delivery_id');
 }
 
+async function generateExpenseId() {
+    return generateFormattedId('EXP', 'expenses', 'expense_id');
+}
+
 module.exports = {
     generateVendorId,
     generateCustomerId,
@@ -73,5 +77,6 @@ module.exports = {
     generatePaymentId,
     generateAccountId,
     generateBankTransactionId,
-    generateDeliveryId
+    generateDeliveryId,
+    generateExpenseId
 };

@@ -115,6 +115,12 @@ export const profitWithdrawals = {
     remove: (id) => api.delete(`/profit-withdrawals/${id}`)
 };
 
+export const expenses = {
+    getAll: () => api.get('/expenses'),
+    create: (data) => api.post('/expenses', data),
+    remove: (id) => api.delete(`/expenses/${id}`)
+};
+
 // Settlements (Direct Settlement - Critical Feature)
 export const settlements = {
     getAll: () => api.get('/settlements'),

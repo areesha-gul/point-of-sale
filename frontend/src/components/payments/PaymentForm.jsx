@@ -1,40 +1,45 @@
 import { useEffect, useState } from 'react';
-import { payments, vendors, customers, bankAccounts, profitWithdrawals } from '../../services/api';
+import { payments, vendors, customers, bankAccounts, profitWithdrawals, expenses } from '../../services/api';
 import { formatIndianCurrency, formatDate, getTodayDate } from '../../services/formatter';
 
 const initialForm = { party_type: 'vendor', party_id: '', amount: '', method: 'bank', bank_account_id: '', direction: 'out', date: getTodayDate(), notes: '' };
 const initialProfitForm = { recipient: 'Iftekhar Ahmad', amount: '', method: 'bank', bank_account_id: '', date: getTodayDate(), notes: '' };
+const initialExpenseForm = { category: 'Utilities', description: '', amount: '', method: 'bank', bank_account_id: '', date: getTodayDate(), notes: '' };
 
 export default function PaymentForm() {
     const [formData, setFormData] = useState(initialForm);
     const [profitFormData, setProfitFormData] = useState(initialProfitForm);
+    const [expenseFormData, setExpenseFormData] = useState(initialExpenseForm);
     const [vendorList, setVendorList] = useState([]);
     const [customerList, setCustomerList] = useState([]);
     const [accountList, setAccountList] = useState([]);
     const [paymentList, setPaymentList] = useState([]);
     const [profitWithdrawalList, setProfitWithdrawalList] = useState([]);
+    const [expenseList, setExpenseList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [activeTab, setActiveTab] = useState('regular'); // 'regular' or 'profit'
+    const [activeTab, setActiveTab] = useState('regular'); // 'regular', 'profit', or 'expenses'
 
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
         try {
-            const [vendorsRes, customersRes, accountsRes, paymentsRes, profitRes] = await Promise.all([
+            const [vendorsRes, customersRes, accountsRes, paymentsRes, profitRes, expensesRes] = await Promise.all([
                 vendors.getAll(), 
                 customers.getAll(), 
                 bankAccounts.getAll(), 
                 payments.getAll(),
-                profitWithdrawals.getAll()
+                profitWithdrawals.getAll(),
+                expenses.getAll()
             ]);
             setVendorList(vendorsRes.data.filter(item => Number(item.current_balance) > 0));
             setCustomerList(customersRes.data.filter(item => Number(item.current_balance) > 0));
             setAccountList(accountsRes.data.filter(item => item.type === 'bank'));
             setPaymentList(paymentsRes.data);
             setProfitWithdrawalList(profitRes.data);
+            setExpenseList(expensesRes.data);
         } catch (err) { setError('Could not load payment data'); }
         finally { setLoading(false); }
     };
@@ -78,6 +83,27 @@ export default function PaymentForm() {
         catch (err) { setError(err.response?.data?.error || 'Could not delete withdrawal'); }
     };
 
+    const handleSubmitExpense = async (event) => {
+        event.preventDefault(); setSaving(true); setError(''); setSuccess('');
+        try {
+            await expenses.create({ 
+                ...expenseFormData, 
+                amount: Number(expenseFormData.amount), 
+                bank_account_id: expenseFormData.method === 'bank' ? Number(expenseFormData.bank_account_id) : null 
+            });
+            setSuccess('Expense recorded successfully!'); 
+            setExpenseFormData(initialExpenseForm); 
+            await loadData();
+        } catch (err) { setError(err.response?.data?.error || 'Could not record expense'); }
+        finally { setSaving(false); }
+    };
+
+    const handleDeleteExpense = async (expense) => {
+        if (!window.confirm('Delete this expense and restore the cash/bank balance?')) return;
+        try { await expenses.remove(expense.id); await loadData(); }
+        catch (err) { setError(err.response?.data?.error || 'Could not delete expense'); }
+    };
+
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
     
     return <div className="page-shell">
@@ -100,6 +126,12 @@ export default function PaymentForm() {
                     onClick={() => { setActiveTab('profit'); setError(''); setSuccess(''); }}
                 >
                     Profit Withdrawals
+                </button>
+                <button 
+                    className={`px-6 py-3 font-semibold transition-colors ${activeTab === 'expenses' ? 'border-b-2 border-orange-600 text-orange-600' : 'text-gray-600 hover:text-orange-600'}`}
+                    onClick={() => { setActiveTab('expenses'); setError(''); setSuccess(''); }}
+                >
+                    Business Expenses
                 </button>
             </div>
         </div>
@@ -184,6 +216,75 @@ export default function PaymentForm() {
                     <table className="w-full">
                         <thead><tr className="border-b-2"><th className="text-left py-3 px-4">Date</th><th className="text-left py-3 px-4">Recipient</th><th className="text-left py-3 px-4">Method</th><th className="text-right py-3 px-4">Amount</th><th className="text-center py-3 px-4">Action</th></tr></thead>
                         <tbody>{profitWithdrawalList.map(withdrawal => <tr className="border-b" key={withdrawal.id}><td className="py-3 px-4">{formatDate(withdrawal.date)}</td><td className="py-3 px-4 font-semibold">{withdrawal.recipient}</td><td className="py-3 px-4 capitalize">{withdrawal.method}</td><td className="py-3 px-4 text-right font-bold">{formatIndianCurrency(withdrawal.amount)}</td><td className="py-3 px-4 text-center"><button className="btn-danger text-sm" onClick={() => handleDeleteProfit(withdrawal)}>Delete</button></td></tr>)}</tbody>
+                    </table>}
+                </div>
+            </>
+        )}
+
+        {/* Business Expenses Tab */}
+        {activeTab === 'expenses' && (
+            <>
+                <form onSubmit={handleSubmitExpense} className="card form-card mb-6 space-y-4">
+                    <div className="bg-orange-50 border border-orange-200 rounded p-3 mb-4">
+                        <p className="text-sm text-orange-800">
+                            <strong>Business Expenses:</strong> Record any business expenses like utilities, rent, salaries, transportation, etc. These will be deducted from your cash or bank account.
+                        </p>
+                    </div>
+                    <div className="form-grid grid-cols-1 md:grid-cols-2">
+                        <div>
+                            <label className="label">Category *</label>
+                            <select className="input select-input" value={expenseFormData.category} onChange={e => setExpenseFormData({ ...expenseFormData, category: e.target.value })} required>
+                                <option value="Utilities">Utilities (Electricity, Water, Gas)</option>
+                                <option value="Rent">Rent</option>
+                                <option value="Salaries">Salaries & Wages</option>
+                                <option value="Transportation">Transportation & Fuel</option>
+                                <option value="Maintenance">Maintenance & Repairs</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Communication">Communication (Phone, Internet)</option>
+                                <option value="Insurance">Insurance</option>
+                                <option value="Taxes">Taxes & Fees</option>
+                                <option value="Other">Other Expenses</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="label">Description *</label>
+                            <input className="input" type="text" placeholder="e.g., Electricity bill for June" value={expenseFormData.description} onChange={e => setExpenseFormData({ ...expenseFormData, description: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label className="label">Amount (₨) *</label>
+                            <input className="input" type="number" min="0.01" step="0.01" value={expenseFormData.amount} onChange={e => setExpenseFormData({ ...expenseFormData, amount: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label className="label">Payment Method *</label>
+                            <select className="input select-input" value={expenseFormData.method} onChange={e => setExpenseFormData({ ...expenseFormData, method: e.target.value, bank_account_id: '' })}>
+                                <option value="bank">Bank</option>
+                                <option value="cash">Cash</option>
+                            </select>
+                        </div>
+                        {expenseFormData.method === 'bank' && (
+                            <div>
+                                <label className="label">Bank account *</label>
+                                <select className="input select-input" value={expenseFormData.bank_account_id} onChange={e => setExpenseFormData({ ...expenseFormData, bank_account_id: e.target.value })} required>
+                                    <option value="">Choose account...</option>
+                                    {accountList.map(account => <option key={account.id} value={account.id}>{account.name} - {formatIndianCurrency(account.current_balance)}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        <div>
+                            <label className="label">Date *</label>
+                            <input className="input" type="date" value={expenseFormData.date} onChange={e => setExpenseFormData({ ...expenseFormData, date: e.target.value })} required />
+                        </div>
+                    </div>
+                    <textarea className="input" rows="2" placeholder="Additional notes (optional)" value={expenseFormData.notes} onChange={e => setExpenseFormData({ ...expenseFormData, notes: e.target.value })} />
+                    {error && <p className="form-error">{error}</p>}{success && <p className="form-success">{success}</p>}
+                    <button className="btn-success w-full text-xl" disabled={saving}>{saving ? 'Saving...' : 'Record Expense'}</button>
+                </form>
+                <div className="card overflow-x-auto">
+                    <h2 className="form-section-title">Expense History</h2>
+                    {expenseList.length === 0 ? <p className="text-gray-600">No expenses recorded yet.</p> : 
+                    <table className="w-full">
+                        <thead><tr className="border-b-2"><th className="text-left py-3 px-4">Date</th><th className="text-left py-3 px-4">Category</th><th className="text-left py-3 px-4">Description</th><th className="text-left py-3 px-4">Method</th><th className="text-right py-3 px-4">Amount</th><th className="text-center py-3 px-4">Action</th></tr></thead>
+                        <tbody>{expenseList.map(expense => <tr className="border-b" key={expense.id}><td className="py-3 px-4">{formatDate(expense.date)}</td><td className="py-3 px-4"><span className="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded">{expense.category}</span></td><td className="py-3 px-4">{expense.description}</td><td className="py-3 px-4 capitalize">{expense.method}</td><td className="py-3 px-4 text-right font-bold text-red-600">{formatIndianCurrency(expense.amount)}</td><td className="py-3 px-4 text-center"><button className="btn-danger text-sm" onClick={() => handleDeleteExpense(expense)}>Delete</button></td></tr>)}</tbody>
                     </table>}
                 </div>
             </>
