@@ -62,6 +62,10 @@
     @apply mt-1 text-gray-600;
   }
 
+  .empty-state {
+    @apply flex min-h-40 flex-col items-center justify-center text-center;
+  }
+
   .form-card {
     @apply border-2 border-blue-100 shadow-sm;
   }

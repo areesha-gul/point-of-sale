@@ -61,9 +61,9 @@ export default function SaleList() {
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Sales</h1>
+        <div className="page-shell">
+            <div className="page-heading">
+                <h1 className="page-title">Sales</h1>
                 <Link to="/sales/new" className="btn-primary">
                     + New Sale
                 </Link>
@@ -92,9 +92,9 @@ export default function SaleList() {
             </div>
 
             {sales.length === 0 ? (
-                <div className="card text-center text-gray-600">
-                    <p className="text-xl">No sales found</p>
-                    <Link to="/sales/new" className="btn-primary mt-4">
+                <div className="card empty-state">
+                    <p className="text-xl text-gray-600">No sales found</p>
+                    <Link to="/sales/new" className="btn-primary mt-5">
                         Create First Sale
                     </Link>
                 </div>

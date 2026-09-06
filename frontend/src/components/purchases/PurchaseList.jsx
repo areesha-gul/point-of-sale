@@ -61,9 +61,9 @@ export default function PurchaseList() {
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Purchases</h1>
+        <div className="page-shell">
+            <div className="page-heading">
+                <h1 className="page-title">Purchases</h1>
                 <Link to="/purchases/new" className="btn-primary">
                     + New Purchase
                 </Link>
@@ -92,9 +92,9 @@ export default function PurchaseList() {
             </div>
 
             {purchases.length === 0 ? (
-                <div className="card text-center text-gray-600">
-                    <p className="text-xl">No purchases found</p>
-                    <Link to="/purchases/new" className="btn-primary mt-4">
+                <div className="card empty-state">
+                    <p className="text-xl text-gray-600">No purchases found</p>
+                    <Link to="/purchases/new" className="btn-primary mt-5">
                         Create First Purchase
                     </Link>
                 </div>
