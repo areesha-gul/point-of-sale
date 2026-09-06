@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
         const product = result.rows[0];
         res.status(201).json(product);
     } catch (error) {
-        if (error.message.includes('UNIQUE constraint failed')) {
+        if (error.code === '23505' || error.message.includes('UNIQUE constraint failed')) {
             return res.status(400).json({ error: 'Product with this name already exists' });
         }
         console.error('Error creating product:', error);
@@ -78,6 +78,17 @@ router.put('/:id', async (req, res) => {
         console.error('Error updating product:', error);
         res.status(500).json({ error: 'Failed to update product' });
     }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        if (!(await query('SELECT id FROM products WHERE id = $1', [req.params.id])).rows[0]) return res.status(404).json({ error: 'Product not found' });
+        const sales = (await query('SELECT COUNT(*) AS count FROM sales WHERE product_id = $1', [req.params.id])).rows[0].count;
+        const purchases = (await query('SELECT COUNT(*) AS count FROM purchases WHERE product_id = $1', [req.params.id])).rows[0].count;
+        if (Number(sales) || Number(purchases)) return res.status(409).json({ error: 'This product has transaction history and cannot be deleted.' });
+        await query('DELETE FROM products WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Product deleted successfully' });
+    } catch (error) { res.status(500).json({ error: 'Failed to delete product' }); }
 });
 
 // Get product stock movements

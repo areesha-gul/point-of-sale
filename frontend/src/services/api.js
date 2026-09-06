@@ -56,7 +56,8 @@ export const products = {
     getById: (id) => api.get(`/products/${id}`),
     create: (data) => api.post('/products', data),
     update: (id, data) => api.put(`/products/${id}`, data),
-    getMovements: (id) => api.get(`/products/${id}/movements`)
+    getMovements: (id) => api.get(`/products/${id}/movements`),
+    remove: (id) => api.delete(`/products/${id}`)
 };
 
 // Customers
@@ -65,7 +66,8 @@ export const customers = {
     getById: (id) => api.get(`/customers/${id}`),
     create: (data) => api.post('/customers', data),
     update: (id, data) => api.put(`/customers/${id}`, data),
-    getLedger: (id) => api.get(`/customers/${id}/ledger`)
+    getLedger: (id) => api.get(`/customers/${id}/ledger`),
+    remove: (id) => api.delete(`/customers/${id}`)
 };
 
 // Vendors
@@ -74,28 +76,34 @@ export const vendors = {
     getById: (id) => api.get(`/vendors/${id}`),
     create: (data) => api.post('/vendors', data),
     update: (id, data) => api.put(`/vendors/${id}`, data),
-    getLedger: (id) => api.get(`/vendors/${id}/ledger`)
+    getLedger: (id) => api.get(`/vendors/${id}/ledger`),
+    remove: (id) => api.delete(`/vendors/${id}`)
 };
 
 // Sales
 export const sales = {
-    getAll: () => api.get('/sales'),
+    getAll: (status) => api.get('/sales', status ? { params: { status } } : undefined),
     getById: (id) => api.get(`/sales/${id}`),
-    create: (data) => api.post('/sales', data)
+    create: (data) => api.post('/sales', data),
+    approve: (id) => api.post(`/sales/${id}/approve`),
+    remove: (id) => api.delete(`/sales/${id}`)
 };
 
 // Purchases
 export const purchases = {
-    getAll: () => api.get('/purchases'),
     getById: (id) => api.get(`/purchases/${id}`),
-    create: (data) => api.post('/purchases', data)
+    create: (data) => api.post('/purchases', data),
+    getAll: (status) => api.get('/purchases', status ? { params: { status } } : undefined),
+    approve: (id) => api.post(`/purchases/${id}/approve`),
+    remove: (id) => api.delete(`/purchases/${id}`)
 };
 
 // Payments
 export const payments = {
     getAll: () => api.get('/payments'),
     getById: (id) => api.get(`/payments/${id}`),
-    create: (data) => api.post('/payments', data)
+    create: (data) => api.post('/payments', data),
+    remove: (id) => api.delete(`/payments/${id}`)
 };
 
 // Settlements (Direct Settlement - Critical Feature)
@@ -104,7 +112,8 @@ export const settlements = {
     getById: (id) => api.get(`/settlements/${id}`),
     create: (data) => api.post('/settlements', data),
     getByCustomer: (customerId) => api.get(`/settlements/customer/${customerId}`),
-    getByVendor: (vendorId) => api.get(`/settlements/vendor/${vendorId}`)
+    getByVendor: (vendorId) => api.get(`/settlements/vendor/${vendorId}`),
+    remove: (id) => api.delete(`/settlements/${id}`)
 };
 
 // Dashboard
@@ -132,5 +141,6 @@ export const accounts = {
 export const bankAccounts = {
     getAll: () => api.get('/bank-accounts'),
     create: (data) => api.post('/bank-accounts', data),
-    update: (id, data) => api.put(`/bank-accounts/${id}`, data)
+    update: (id, data) => api.put(`/bank-accounts/${id}`, data),
+    remove: (id) => api.delete(`/bank-accounts/${id}`)
 };

@@ -14,6 +14,7 @@ export default function PurchaseFormComplete() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [dataWarnings, setDataWarnings] = useState([]);
     const [success, setSuccess] = useState('');
 
     const [formData, setFormData] = useState({
@@ -48,21 +49,31 @@ export default function PurchaseFormComplete() {
     }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.other_charges, formData.amount_paid]);
 
     const loadData = async () => {
-        try {
-            const [vendorsRes, productsRes, accountsRes] = await Promise.all([
-                vendors.getAll(),
-                products.getAll(),
-                bankAccounts.getAll()
-            ]);
-            
-            setVendorList(vendorsRes.data);
-            setProductList(productsRes.data);
-            setBankAccounts(accountsRes.data);
-        } catch (err) {
-            setError(err.response?.data?.error || 'Could not load vendors, products, or bank accounts');
-        } finally {
-            setLoading(false);
+        const results = await Promise.allSettled([
+            vendors.getAll(),
+            products.getAll(),
+            bankAccounts.getAll()
+        ]);
+        const warnings = [];
+
+        if (results[0].status === 'fulfilled') {
+            setVendorList(results[0].value.data);
+        } else {
+            warnings.push('Vendors could not be loaded.');
         }
+        if (results[1].status === 'fulfilled') {
+            setProductList(results[1].value.data);
+        } else {
+            warnings.push('Products could not be loaded.');
+        }
+        if (results[2].status === 'fulfilled') {
+            setBankAccounts(results[2].value.data);
+        } else {
+            warnings.push('Bank accounts could not be loaded.');
+        }
+
+        setDataWarnings(warnings);
+        setLoading(false);
     };
 
     const calculateTotals = () => {
@@ -164,6 +175,13 @@ export default function PurchaseFormComplete() {
                 </div>
             )}
 
+            {dataWarnings.length > 0 && (
+                <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 px-6 py-4 rounded-lg mb-6">
+                    {dataWarnings.map(warning => <p key={warning}>{warning}</p>)}
+                    <p className="mt-1 text-sm">You can still use the lists that loaded successfully.</p>
+                </div>
+            )}
+
             {success && (
                 <div className="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg mb-6">
                     {success}
@@ -188,6 +206,7 @@ export default function PurchaseFormComplete() {
                                 </option>
                             ))}
                         </select>
+                        {vendorList.length === 0 && <p className="mt-2 text-red-600">No vendors found. Add a vendor first.</p>}
                         {selectedVendor && (
                             <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded">
                                 <p className="font-bold text-red-700">Previous Due:</p>
@@ -214,6 +233,7 @@ export default function PurchaseFormComplete() {
                                 </option>
                             ))}
                         </select>
+                        {productList.length === 0 && <p className="mt-2 text-red-600">No products found. Add a product first.</p>}
                     </div>
                 </div>
 

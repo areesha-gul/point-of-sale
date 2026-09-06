@@ -38,6 +38,12 @@ export default function CustomerList() {
         }
     };
 
+    const handleDelete = async (customer) => {
+        if (!window.confirm(`Delete ${customer.name}? Customers with history cannot be deleted.`)) return;
+        try { await customers.remove(customer.id); await loadCustomers(); }
+        catch (err) { setError(err.response?.data?.error || 'Could not delete customer'); }
+    };
+
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
 
     return (
@@ -81,6 +87,7 @@ export default function CustomerList() {
                                     >
                                         View Ledger
                                     </Link>
+                                    <button className="btn-danger text-sm" onClick={() => handleDelete(customer)}>Delete</button>
                                 </td>
                             </tr>
                         ))}

@@ -77,6 +77,20 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+router.delete('/:id', async (req, res) => {
+    try {
+        if (!(await query('SELECT id FROM customers WHERE id = $1', [req.params.id])).rows[0]) {
+            return res.status(404).json({ error: 'Customer not found' });
+        }
+        const sales = (await query('SELECT COUNT(*) AS count FROM sales WHERE customer_id = $1', [req.params.id])).rows[0].count;
+        const payments = (await query("SELECT COUNT(*) AS count FROM payments WHERE party_type = 'customer' AND party_id = $1", [req.params.id])).rows[0].count;
+        const settlements = (await query('SELECT COUNT(*) AS count FROM settlements WHERE customer_id = $1', [req.params.id])).rows[0].count;
+        if (Number(sales) || Number(payments) || Number(settlements)) return res.status(409).json({ error: 'This customer has transaction history and cannot be deleted.' });
+        await query('DELETE FROM customers WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Customer deleted successfully' });
+    } catch (error) { res.status(500).json({ error: 'Failed to delete customer' }); }
+});
+
 // Get customer ledger (transaction history)
 router.get('/:id/ledger', async (req, res) => {
     try {

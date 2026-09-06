@@ -157,6 +157,20 @@ router.post('/', async (req, res) => {
     }
 });
 
+router.delete('/:id', async (req, res) => {
+    try {
+        const settlement = (await query('SELECT * FROM settlements WHERE id = $1 AND voided = 0', [req.params.id])).rows[0];
+        if (!settlement) return res.status(404).json({ error: 'Settlement not found' });
+        await withTransaction(async (client) => {
+            await AccountingService.updateCustomerBalance(settlement.customer_id, settlement.amount, 'add', client);
+            await AccountingService.updateVendorBalance(settlement.vendor_id, settlement.amount, 'add', client);
+            await client.query("DELETE FROM ledger_entries WHERE ref_type = 'settlement' AND ref_id = $1", [settlement.id]);
+            await client.query('DELETE FROM settlements WHERE id = $1', [settlement.id]);
+        });
+        res.json({ message: 'Settlement deleted and balances restored' });
+    } catch (error) { res.status(500).json({ error: 'Failed to delete settlement' }); }
+});
+
 // Get settlements involving a specific customer
 router.get('/customer/:customerId', async (req, res) => {
     try {

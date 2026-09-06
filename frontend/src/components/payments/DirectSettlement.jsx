@@ -25,6 +25,7 @@ export default function DirectSettlement() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [settlementList, setSettlementList] = useState([]);
 
     const [formData, setFormData] = useState({
         customer_id: '',
@@ -43,9 +44,10 @@ export default function DirectSettlement() {
 
     const loadData = async () => {
         try {
-            const [customersRes, vendorsRes] = await Promise.all([
+            const [customersRes, vendorsRes, settlementsRes] = await Promise.all([
                 customers.getAll(),
-                vendors.getAll()
+                vendors.getAll(),
+                settlements.getAll()
             ]);
             
             // Filter to only show customers with outstanding receivables
@@ -55,11 +57,18 @@ export default function DirectSettlement() {
             
             setCustomerList(customersWithBalance);
             setVendorList(vendorsWithBalance);
+            setSettlementList(settlementsRes.data);
         } catch (err) {
             setError('Failed to load customers and vendors');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDeleteSettlement = async (settlement) => {
+        if (!window.confirm('Delete this direct settlement? Balances will be restored.')) return;
+        try { await settlements.remove(settlement.id); await loadData(); }
+        catch (err) { setError(err.response?.data?.error || 'Could not delete settlement'); }
     };
 
     const handleCustomerChange = (e) => {
@@ -328,6 +337,10 @@ export default function DirectSettlement() {
                     <p>• You now owe Vendor B ₨0</p>
                     <p>• Your cash/bank balances remain unchanged</p>
                 </div>
+            </div>
+            <div className="card mt-6 overflow-x-auto">
+                <h2 className="form-section-title">Direct settlement records</h2>
+                {settlementList.length === 0 ? <p className="text-gray-600">No settlement records yet.</p> : <table className="w-full"><thead><tr className="border-b-2"><th className="text-left py-3 px-4">Date</th><th className="text-left py-3 px-4">Customer</th><th className="text-left py-3 px-4">Vendor</th><th className="text-right py-3 px-4">Amount</th><th className="text-center py-3 px-4">Action</th></tr></thead><tbody>{settlementList.map(settlement => <tr className="border-b" key={settlement.id}><td className="py-3 px-4">{settlement.date}</td><td className="py-3 px-4">{settlement.customer_name}</td><td className="py-3 px-4">{settlement.vendor_name}</td><td className="py-3 px-4 text-right font-bold">{formatIndianCurrency(settlement.amount)}</td><td className="py-3 px-4 text-center"><button className="btn-danger text-sm" onClick={() => handleDeleteSettlement(settlement)}>Delete</button></td></tr>)}</tbody></table>}
             </div>
         </div>
     );

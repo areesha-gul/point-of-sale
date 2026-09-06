@@ -77,6 +77,26 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// Delete a vendor only when it has no history.
+router.delete('/:id', async (req, res) => {
+    try {
+        const vendorResult = await query('SELECT id FROM vendors WHERE id = $1', [req.params.id]);
+        if (!vendorResult.rows[0]) return res.status(404).json({ error: 'Vendor not found' });
+
+        const purchaseCount = (await query('SELECT COUNT(*) AS count FROM purchases WHERE vendor_id = $1', [req.params.id])).rows[0].count;
+        const settlementCount = (await query('SELECT COUNT(*) AS count FROM settlements WHERE vendor_id = $1', [req.params.id])).rows[0].count;
+        if (Number(purchaseCount) > 0 || Number(settlementCount) > 0) {
+            return res.status(409).json({ error: 'This vendor has transaction history and cannot be deleted.' });
+        }
+
+        await query('DELETE FROM vendors WHERE id = $1', [req.params.id]);
+        res.json({ message: 'Vendor deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting vendor:', error);
+        res.status(500).json({ error: 'Failed to delete vendor' });
+    }
+});
+
 // Get vendor ledger (transaction history)
 router.get('/:id/ledger', async (req, res) => {
     try {

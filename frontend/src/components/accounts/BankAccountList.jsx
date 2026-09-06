@@ -53,6 +53,12 @@ export default function BankAccountList() {
         }
     };
 
+    const handleDelete = async (account) => {
+        if (!window.confirm(`Hide ${account.name}? Its transaction history will be kept.`)) return;
+        try { await bankAccounts.remove(account.id); await loadAccounts(); }
+        catch (err) { setError(err.response?.data?.error || 'Could not remove bank account'); }
+    };
+
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
 
     return (
@@ -113,6 +119,7 @@ export default function BankAccountList() {
                             <div className="text-right">
                                 <p className="text-sm text-gray-600">Current balance</p>
                                 <p className="text-2xl font-bold text-blue-700">{formatIndianCurrency(account.current_balance)}</p>
+                                <button className="btn-danger mt-2 text-sm" onClick={() => handleDelete(account)}>Remove</button>
                             </div>
                         </div>
                     </div>

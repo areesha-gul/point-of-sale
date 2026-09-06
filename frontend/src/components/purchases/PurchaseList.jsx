@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { formatIndianCurrency, formatDate } from '../../services/formatter';
+import { purchases as purchasesApi } from '../../services/api';
 
 export default function PurchaseList() {
     const [purchases, setPurchases] = useState([]);
@@ -14,13 +15,8 @@ export default function PurchaseList() {
 
     const loadPurchases = async () => {
         try {
-            const url = filter === 'all' 
-                ? '/api/purchases' 
-                : `/api/purchases?status=${filter}`;
-            
-            const response = await fetch(url, { credentials: 'include' });
-            const data = await response.json();
-            setPurchases(data);
+            const response = await purchasesApi.getAll(filter === 'all' ? undefined : filter);
+            setPurchases(response.data);
         } catch (error) {
             console.error('Error loading purchases:', error);
         } finally {
@@ -33,18 +29,9 @@ export default function PurchaseList() {
         
         setProcessing(id);
         try {
-            const response = await fetch(`/api/purchases/${id}/approve`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                alert('Purchase approved successfully!');
-                loadPurchases();
-            } else {
-                const error = await response.json();
-                alert(error.error || 'Failed to approve purchase');
-            }
+            await purchasesApi.approve(id);
+            alert('Purchase approved successfully!');
+            loadPurchases();
         } catch (error) {
             alert('Error approving purchase');
         } finally {
@@ -61,18 +48,9 @@ export default function PurchaseList() {
         
         setProcessing(id);
         try {
-            const response = await fetch(`/api/purchases/${id}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                alert(status === 'draft' ? 'Purchase deleted!' : 'Purchase voided!');
-                loadPurchases();
-            } else {
-                const error = await response.json();
-                alert(error.error || 'Failed to delete purchase');
-            }
+            await purchasesApi.remove(id);
+            alert(status === 'draft' ? 'Purchase deleted!' : 'Purchase voided!');
+            loadPurchases();
         } catch (error) {
             alert('Error deleting purchase');
         } finally {

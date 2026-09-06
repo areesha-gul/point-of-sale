@@ -38,6 +38,16 @@ export default function VendorList() {
         }
     };
 
+    const handleDelete = async (vendor) => {
+        if (!window.confirm(`Delete ${vendor.name}? Vendors with purchase history cannot be deleted.`)) return;
+        try {
+            await vendors.remove(vendor.id);
+            await loadVendors();
+        } catch (err) {
+            setError(err.response?.data?.error || 'Could not delete vendor');
+        }
+    };
+
     if (loading) return <div className="text-center text-2xl">Loading...</div>;
 
     return (
@@ -81,6 +91,9 @@ export default function VendorList() {
                                     >
                                         View Ledger
                                     </Link>
+                                    <button className="btn-danger text-sm" onClick={() => handleDelete(vendor)}>
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                         ))}

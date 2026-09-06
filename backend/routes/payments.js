@@ -157,4 +157,19 @@ router.post('/', async (req, res) => {
     }
 });
 
+router.delete('/:id', async (req, res) => {
+    try {
+        const payment = (await query('SELECT * FROM payments WHERE id = $1 AND voided = 0', [req.params.id])).rows[0];
+        if (!payment) return res.status(404).json({ error: 'Payment not found' });
+        await withTransaction(async (client) => {
+            if (payment.party_type === 'customer' && payment.direction === 'in') await AccountingService.updateCustomerBalance(payment.party_id, payment.amount, 'add', client);
+            if (payment.party_type === 'vendor' && payment.direction === 'out') await AccountingService.updateVendorBalance(payment.party_id, payment.amount, 'add', client);
+            await AccountingService.updateAccountBalance(payment.method, payment.amount, payment.direction === 'in' ? 'subtract' : 'add', client);
+            await client.query("DELETE FROM ledger_entries WHERE ref_type = 'payment' AND ref_id = $1", [payment.id]);
+            await client.query('DELETE FROM payments WHERE id = $1', [payment.id]);
+        });
+        res.json({ message: 'Payment deleted and balances restored' });
+    } catch (error) { res.status(500).json({ error: 'Failed to delete payment' }); }
+});
+
 module.exports = router;

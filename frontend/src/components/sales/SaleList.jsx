@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { formatIndianCurrency, formatDate } from '../../services/formatter';
+import { sales as salesApi } from '../../services/api';
 
 export default function SaleList() {
     const [sales, setSales] = useState([]);
@@ -14,13 +15,8 @@ export default function SaleList() {
 
     const loadSales = async () => {
         try {
-            const url = filter === 'all' 
-                ? '/api/sales' 
-                : `/api/sales?status=${filter}`;
-            
-            const response = await fetch(url, { credentials: 'include' });
-            const data = await response.json();
-            setSales(data);
+            const response = await salesApi.getAll(filter === 'all' ? undefined : filter);
+            setSales(response.data);
         } catch (error) {
             console.error('Error loading sales:', error);
         } finally {
@@ -33,18 +29,9 @@ export default function SaleList() {
         
         setProcessing(id);
         try {
-            const response = await fetch(`/api/sales/${id}/approve`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                alert('Sale approved successfully!');
-                loadSales();
-            } else {
-                const error = await response.json();
-                alert(error.error || 'Failed to approve sale');
-            }
+            await salesApi.approve(id);
+            alert('Sale approved successfully!');
+            loadSales();
         } catch (error) {
             alert('Error approving sale');
         } finally {
@@ -61,18 +48,9 @@ export default function SaleList() {
         
         setProcessing(id);
         try {
-            const response = await fetch(`/api/sales/${id}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                alert(status === 'draft' ? 'Sale deleted!' : 'Sale voided!');
-                loadSales();
-            } else {
-                const error = await response.json();
-                alert(error.error || 'Failed to delete sale');
-            }
+            await salesApi.remove(id);
+            alert(status === 'draft' ? 'Sale deleted!' : 'Sale voided!');
+            loadSales();
         } catch (error) {
             alert('Error deleting sale');
         } finally {
