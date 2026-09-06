@@ -58,7 +58,8 @@ router.post('/:id/approve', async (req, res) => {
         if (!purchase) return res.status(404).json({ error: 'Purchase not found or already approved' });
         await withTransaction(async (client) => {
             await client.query(`UPDATE purchases SET status = 'approved', approved_at = CURRENT_TIMESTAMP, approved_by = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [req.user?.id || null, req.params.id]);
-            await AccountingService.updateProductAfterPurchase(purchase.product_id, purchase.qty_kg, Number(purchase.grand_total) / Number(purchase.qty_kg), client);
+            // Update product stock only (no avg_cost calculation needed)
+            await client.query('UPDATE products SET current_stock = current_stock + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [purchase.qty_kg, purchase.product_id]);
             const unpaid = Number(purchase.grand_total) - Number(purchase.amount_paid);
             if (unpaid > 0) await AccountingService.updateVendorBalance(purchase.vendor_id, unpaid, 'add', client);
             if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'subtract', client, purchase.bank_account_id);
@@ -90,7 +91,8 @@ router.delete('/:id', async (req, res) => {
         if (purchase.status !== 'approved') return res.status(400).json({ error: 'Purchase already voided' });
         await withTransaction(async (client) => {
             await client.query(`UPDATE purchases SET status = 'voided', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [req.params.id]);
-            await AccountingService.updateProductAfterSale(purchase.product_id, purchase.qty_kg, client);
+            // Reduce product stock (no avg_cost update needed)
+            await client.query('UPDATE products SET current_stock = current_stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [purchase.qty_kg, purchase.product_id]);
             const unpaid = Number(purchase.grand_total) - Number(purchase.amount_paid);
             if (unpaid > 0) await AccountingService.updateVendorBalance(purchase.vendor_id, unpaid, 'subtract', client);
             if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'add', client, purchase.bank_account_id);

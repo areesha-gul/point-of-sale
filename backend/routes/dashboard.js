@@ -132,17 +132,20 @@ router.get('/kpis', async (req, res) => {
             WHERE date >= $1 AND status = 'approved'
         `, [firstDayOfMonth])).rows[0];
 
-        // Total profit (MTD) - Revenue - COGS
-        const mtdProfit = (await query(`
-            SELECT 
-                COALESCE(SUM(s.total), 0) as revenue,
-                COALESCE(SUM(s.qty_kg * p.avg_cost), 0) as cogs
-            FROM sales s
-            JOIN products p ON s.product_id = p.id
-            WHERE s.date >= $1 AND s.status = 'approved'
+        // Total profit (MTD) - Total Sales - Total Purchases (actual cost paid)
+        const mtdRevenue = (await query(`
+            SELECT COALESCE(SUM(total), 0) as revenue
+            FROM sales
+            WHERE date >= $1 AND status = 'approved'
         `, [firstDayOfMonth])).rows[0];
 
-        const totalProfit = Number(mtdProfit.revenue) - Number(mtdProfit.cogs);
+        const mtdCost = (await query(`
+            SELECT COALESCE(SUM(grand_total), 0) as cost
+            FROM purchases
+            WHERE date >= $1 AND status = 'approved'
+        `, [firstDayOfMonth])).rows[0];
+
+        const totalProfit = Number(mtdRevenue.revenue) - Number(mtdCost.cost);
         const profitSplit = {
             istekhar: totalProfit * 2 / 5,
             shaukat: totalProfit * 2 / 5,

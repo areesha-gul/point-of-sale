@@ -76,7 +76,8 @@ router.post('/:id/approve', async (req, res) => {
         if (Number(product.current_stock) < Number(sale.qty_kg)) return res.status(400).json({ error: 'Insufficient stock for approval', available: product.current_stock, required: sale.qty_kg });
         await withTransaction(async (client) => {
             await client.query(`UPDATE sales SET status = 'approved', approved_at = CURRENT_TIMESTAMP, approved_by = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [req.user?.id || null, req.params.id]);
-            await AccountingService.updateProductAfterSale(sale.product_id, sale.qty_kg, client);
+            // Update product stock only (no avg_cost calculation needed)
+            await client.query('UPDATE products SET current_stock = current_stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [sale.qty_kg, sale.product_id]);
             const unpaid = Number(sale.total) - Number(sale.amount_paid);
             if (unpaid > 0) await AccountingService.updateCustomerBalance(sale.customer_id, unpaid, 'add', client);
             if (Number(sale.amount_paid) > 0 && sale.payment_method !== 'none') await AccountingService.updateAccountBalance(sale.payment_method === 'cash' ? 'cash' : 'bank', sale.amount_paid, 'add', client, sale.bank_account_id);
@@ -117,7 +118,8 @@ router.delete('/:id', async (req, res) => {
         if (sale.status !== 'approved') return res.status(400).json({ error: 'Sale already voided' });
         await withTransaction(async (client) => {
             await client.query(`UPDATE sales SET status = 'voided', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [req.params.id]);
-            await AccountingService.updateProductAfterPurchase(sale.product_id, sale.qty_kg, 0, client);
+            // Restore product stock (no avg_cost update needed)
+            await client.query('UPDATE products SET current_stock = current_stock + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [sale.qty_kg, sale.product_id]);
             const unpaid = Number(sale.total) - Number(sale.amount_paid);
             if (unpaid > 0) await AccountingService.updateCustomerBalance(sale.customer_id, unpaid, 'subtract', client);
             if (Number(sale.amount_paid) > 0 && sale.payment_method !== 'none') await AccountingService.updateAccountBalance(sale.payment_method === 'cash' ? 'cash' : 'bank', sale.amount_paid, 'subtract', client, sale.bank_account_id);
