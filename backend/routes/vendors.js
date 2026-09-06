@@ -124,7 +124,8 @@ router.get('/:id/ledger', async (req, res) => {
 
         // Get purchases
         const purchasesResult = await query(`
-            SELECT p.id, p.date, p.total, p.amount_paid, pr.name as product_name
+            SELECT p.id, p.date, p.total, p.grand_total, p.freight_charges, p.other_charges, 
+                   p.amount_paid, pr.name as product_name, p.qty_kg
             FROM purchases p
             JOIN products pr ON p.product_id = pr.id
             WHERE p.vendor_id = $1 AND p.voided = 0
@@ -133,15 +134,42 @@ router.get('/:id/ledger', async (req, res) => {
         const purchases = purchasesResult.rows;
 
         purchases.forEach(purchase => {
-            const payable = purchase.total - purchase.amount_paid;
+            const grandTotal = Number(purchase.grand_total);
+            const freightCharges = Number(purchase.freight_charges) || 0;
+            const otherCharges = Number(purchase.other_charges) || 0;
+            const productTotal = Number(purchase.total);
+            const amountPaid = Number(purchase.amount_paid) || 0;
+            const payable = grandTotal - amountPaid;
+            
             if (payable > 0) {
+                // Create detailed description
+                let description = `Purchase - ${purchase.product_name}`;
+                
+                if (freightCharges > 0 || otherCharges > 0) {
+                    description += `\nProduct: ₨${productTotal.toFixed(2)}`;
+                    if (freightCharges > 0) {
+                        description += `\nFreight: ₨${freightCharges.toFixed(2)}`;
+                    }
+                    if (otherCharges > 0) {
+                        description += `\nOther charges: ₨${otherCharges.toFixed(2)}`;
+                    }
+                    description += `\nTotal: ₨${grandTotal.toFixed(2)}`;
+                }
+                
                 transactions.push({
                     date: purchase.date,
                     type: 'purchase',
-                    description: `Purchase - ${purchase.product_name}`,
+                    description: description,
                     ref_id: purchase.id,
                     debit: 0,
-                    credit: payable
+                    credit: payable,
+                    details: {
+                        product_total: productTotal,
+                        freight_charges: freightCharges,
+                        other_charges: otherCharges,
+                        grand_total: grandTotal,
+                        amount_paid: amountPaid
+                    }
                 });
             }
         });

@@ -55,7 +55,7 @@ export default function VendorLedger() {
                         {data.transactions.map((txn, index) => (
                             <tr key={index} className="border-b">
                                 <td className="py-3 px-4">{formatDate(txn.date)}</td>
-                                <td className="py-3 px-4">{txn.description}</td>
+                                <td className="py-3 px-4 whitespace-pre-line">{txn.description}</td>
                                 <td className="py-3 px-4 text-right text-green-600">
                                     {txn.debit > 0 ? formatIndianCurrency(txn.debit) : '-'}
                                 </td>

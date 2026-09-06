@@ -118,7 +118,8 @@ router.get('/:id/ledger', async (req, res) => {
 
         // Get sales
         const salesResult = await query(`
-            SELECT s.id, s.date, s.total, s.amount_paid, p.name as product_name
+            SELECT s.id, s.date, s.total, s.freight_charges, s.amount_paid, 
+                   p.name as product_name, s.qty_kg, s.rate
             FROM sales s
             JOIN products p ON s.product_id = p.id
             WHERE s.customer_id = $1 AND s.voided = 0
@@ -127,15 +128,35 @@ router.get('/:id/ledger', async (req, res) => {
         const sales = salesResult.rows;
 
         sales.forEach(sale => {
-            const receivable = sale.total - sale.amount_paid;
+            const total = Number(sale.total);
+            const freightCharges = Number(sale.freight_charges) || 0;
+            const amountPaid = Number(sale.amount_paid) || 0;
+            const productAmount = total - freightCharges;
+            const receivable = total - amountPaid;
+            
             if (receivable > 0) {
+                // Create detailed description
+                let description = `Sale - ${sale.product_name}`;
+                
+                if (freightCharges > 0) {
+                    description += `\nProduct: ₨${productAmount.toFixed(2)}`;
+                    description += `\nFreight deducted: ₨${freightCharges.toFixed(2)}`;
+                    description += `\nNet receivable: ₨${total.toFixed(2)}`;
+                }
+                
                 transactions.push({
                     date: sale.date,
                     type: 'sale',
-                    description: `Sale - ${sale.product_name}`,
+                    description: description,
                     ref_id: sale.id,
                     debit: receivable,
-                    credit: 0
+                    credit: 0,
+                    details: {
+                        product_amount: productAmount,
+                        freight_charges: freightCharges,
+                        total: total,
+                        amount_paid: amountPaid
+                    }
                 });
             }
         });
