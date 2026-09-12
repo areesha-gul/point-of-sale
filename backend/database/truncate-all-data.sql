@@ -47,5 +47,12 @@ ALTER SEQUENCE IF EXISTS vendors_id_seq RESTART WITH 1;
 ALTER SEQUENCE IF EXISTS products_id_seq RESTART WITH 1;
 ALTER SEQUENCE IF EXISTS cash_bank_accounts_id_seq RESTART WITH 1;
 
+-- Re-initialize default cash and bank accounts
+INSERT INTO cash_bank_accounts (account_id, name, type, opening_balance, current_balance)
+VALUES 
+    ('ACC-00001', 'Cash in Hand', 'cash', 0, 0),
+    ('ACC-00002', 'Main Bank Account', 'bank', 0, 0)
+ON CONFLICT (account_id) DO NOTHING;
+
 -- Display success message
 SELECT 'Database truncated successfully. All data cleared except user accounts.' AS status;

@@ -145,6 +145,17 @@ router.get('/kpis', async (req, res) => {
             WHERE date >= $1 AND status = 'approved'
         `, [firstDayOfMonth])).rows[0];
 
+        // Total expenses (MTD)
+        const mtdExpenses = (await query(`
+            SELECT 
+                COALESCE(SUM(amount), 0) as total,
+                COALESCE(SUM(iftekhar_share), 0) as iftekhar_expenses,
+                COALESCE(SUM(shaukat_share), 0) as shaukat_expenses,
+                COALESCE(SUM(bank_share), 0) as bank_expenses
+            FROM expenses
+            WHERE date >= $1
+        `, [firstDayOfMonth])).rows[0];
+
         const totalProfit = Number(mtdRevenue.revenue) - Number(mtdCost.cost);
         const profitSplit = {
             iftekhar_ahmad: totalProfit * 2 / 5,
@@ -193,6 +204,12 @@ router.get('/kpis', async (req, res) => {
             profitSplit,
             profitWithdrawals: withdrawalsByRecipient,
             profitRemaining,
+            totalExpenses: Number(mtdExpenses.total),
+            expensesByPartner: {
+                iftekhar_ahmad: Number(mtdExpenses.iftekhar_expenses),
+                shaukat_rang_illahi: Number(mtdExpenses.shaukat_expenses),
+                bank: Number(mtdExpenses.bank_expenses)
+            },
             pendingPurchases,
             pendingSales,
             pendingPayments,
