@@ -1,0 +1,42 @@
+name: Keep Render Backend Awake
+
+on:
+  schedule:
+    # Run every 5 minutes
+    # GitHub Actions uses UTC time
+    - cron: '*/5 * * * *'
+  
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          echo "Pinging backend at $(date)"
+          
+          # Try to ping the health endpoint
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://pos-backend-ig4w.onrender.com/health || echo "failed")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Backend is awake and healthy (HTTP 200)"
+          elif [ "$response" = "failed" ]; then
+            echo "⚠️ Backend might be sleeping, waking up..."
+            # Wait 10 seconds for Render to wake up
+            sleep 10
+            # Try again
+            response2=$(curl -s -o /dev/null -w "%{http_code}" https://pos-backend-ig4w.onrender.com/health || echo "failed")
+            if [ "$response2" = "200" ]; then
+              echo "✅ Backend woke up successfully (HTTP 200)"
+            else
+              echo "❌ Backend still not responding (HTTP $response2)"
+              exit 1
+            fi
+          else
+            echo "⚠️ Backend returned HTTP $response"
+          fi
+          
+          echo "Ping completed at $(date)"
