@@ -68,6 +68,10 @@ async function generateExpenseId() {
     return generateFormattedId('EXP', 'expenses', 'expense_id');
 }
 
+async function generateAdjustmentId() {
+    return generateFormattedId('ADJ', 'inventory_adjustments', 'adjustment_id');
+}
+
 module.exports = {
     generateVendorId,
     generateCustomerId,
@@ -78,5 +82,6 @@ module.exports = {
     generateAccountId,
     generateBankTransactionId,
     generateDeliveryId,
-    generateExpenseId
+    generateExpenseId,
+    generateAdjustmentId
 };

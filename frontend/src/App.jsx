@@ -7,6 +7,7 @@ import Login from './components/auth/Login';
 import DashboardEnhanced from './components/dashboard/DashboardEnhanced';
 import Layout from './components/common/Layout';
 import ProductList from './components/products/ProductList';
+import InventoryAdjustment from './components/products/InventoryAdjustment';
 import CustomerList from './components/customers/CustomerList';
 import CustomerLedger from './components/customers/CustomerLedger';
 import VendorList from './components/vendors/VendorList';
@@ -96,6 +97,7 @@ function App() {
         >
           <Route index element={<DashboardEnhanced />} />
           <Route path="products" element={<ProductList />} />
+          <Route path="inventory-adjustments" element={<InventoryAdjustment />} />
           <Route path="bank-accounts" element={<BankAccountList />} />
           <Route path="backups" element={<BackupDownload />} />
           <Route path="customers" element={<CustomerList />} />

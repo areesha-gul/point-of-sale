@@ -125,7 +125,18 @@ export default function PurchaseList() {
                                         <div className="text-sm text-gray-600">{purchase.vendor_id}</div>
                                     </td>
                                     <td className="py-3 px-4">{purchase.product_name}</td>
-                                    <td className="py-3 px-4 text-right">{purchase.qty_kg} KG</td>
+                                    <td className="py-3 px-4 text-right">
+                                        <div>{purchase.qty_kg} KG</div>
+                                        {purchase.actual_weight_kg && purchase.weight_difference !== 0 && (
+                                            <div className="text-xs mt-1">
+                                                <span className="text-gray-600">Actual: {purchase.actual_weight_kg} KG</span>
+                                                <br/>
+                                                <span className={purchase.weight_difference > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                                                    {purchase.weight_difference > 0 ? '+' : ''}{purchase.weight_difference} KG
+                                                </span>
+                                            </div>
+                                        )}
+                                    </td>
                                     <td className="py-3 px-4 text-right font-bold">
                                         {formatIndianCurrency(purchase.grand_total || purchase.total)}
                                     </td>

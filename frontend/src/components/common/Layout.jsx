@@ -32,6 +32,7 @@ const additionalLinks = [
     { to: '/customers', label: 'Customers', icon: Users },
     { to: '/vendors', label: 'Vendors', icon: UserRound },
     { to: '/products', label: 'Products', icon: Package },
+    { to: '/inventory-adjustments', label: 'Inventory Adjustments', icon: FileChartColumn },
     { to: '/bank-accounts', label: 'Bank Accounts', icon: WalletCards },
     { to: '/backups', label: 'Download Backup', icon: Archive },
     { to: '/reports/outstanding', label: 'Reports', icon: BarChart3 }

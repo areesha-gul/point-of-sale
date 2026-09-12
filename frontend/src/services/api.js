@@ -159,3 +159,11 @@ export const bankAccounts = {
     update: (id, data) => api.put(`/bank-accounts/${id}`, data),
     remove: (id) => api.delete(`/bank-accounts/${id}`)
 };
+
+// Inventory Adjustments
+export const inventoryAdjustments = {
+    getAll: (product_id) => api.get('/inventory-adjustments', product_id ? { params: { product_id } } : undefined),
+    getById: (id) => api.get(`/inventory-adjustments/${id}`),
+    create: (data) => api.post('/inventory-adjustments', data),
+    remove: (id) => api.delete(`/inventory-adjustments/${id}`)
+};

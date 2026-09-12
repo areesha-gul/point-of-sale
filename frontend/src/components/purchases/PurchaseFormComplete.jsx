@@ -22,6 +22,7 @@ export default function PurchaseFormComplete() {
         vendor_id: '',
         product_id: '',
         qty_kg: '',
+        actual_weight_kg: '',
         rate: '',
         freight_charges: '0',
         other_charges: '0',
@@ -120,6 +121,7 @@ export default function PurchaseFormComplete() {
                 vendor_id: parseInt(formData.vendor_id),
                 product_id: parseInt(formData.product_id),
                 qty_kg: parseFloat(formData.qty_kg),
+                actual_weight_kg: formData.actual_weight_kg ? parseFloat(formData.actual_weight_kg) : null,
                 rate: parseFloat(formData.rate),
                 freight_charges: parseFloat(formData.freight_charges),
                 other_charges: parseFloat(formData.other_charges),
@@ -140,6 +142,7 @@ export default function PurchaseFormComplete() {
                 vendor_id: '',
                 product_id: '',
                 qty_kg: '',
+                actual_weight_kg: '',
                 rate: '',
                 freight_charges: '0',
                 other_charges: '0',
@@ -251,18 +254,40 @@ export default function PurchaseFormComplete() {
                 </div>
 
                 <div className="form-grid grid-cols-1 md:grid-cols-3">
-                    {/* Quantity */}
+                    {/* Billed Weight (Quantity) */}
                     <div>
-                        <label className="label">Quantity (KG) *</label>
+                        <label className="label">Billed Weight (KG) *</label>
                         <input
                             type="number"
-                            step="0.01"
-                            min="0.01"
+                            step="0.001"
+                            min="0.001"
                             className="input"
                             value={formData.qty_kg}
                             onChange={(e) => setFormData({ ...formData, qty_kg: e.target.value })}
                             required
                         />
+                        <p className="text-xs text-gray-600 mt-1">Weight on invoice/bill</p>
+                    </div>
+
+                    {/* Actual Received Weight (Optional) */}
+                    <div>
+                        <label className="label">Actual Received Weight (KG)</label>
+                        <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            className="input"
+                            value={formData.actual_weight_kg}
+                            onChange={(e) => setFormData({ ...formData, actual_weight_kg: e.target.value })}
+                            placeholder="Optional"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">
+                            {formData.actual_weight_kg && formData.qty_kg ? (
+                                <span className={parseFloat(formData.actual_weight_kg) > parseFloat(formData.qty_kg) ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                                    Difference: {(parseFloat(formData.actual_weight_kg || 0) - parseFloat(formData.qty_kg || 0)).toFixed(3)} KG
+                                </span>
+                            ) : 'Weight on scale (if different)'}
+                        </p>
                     </div>
 
                     {/* Rate per KG */}
@@ -278,17 +303,19 @@ export default function PurchaseFormComplete() {
                             required
                         />
                     </div>
+                </div>
 
-                    {/* Total (Auto-calculated) */}
-                    <div>
-                        <label className="label">Product Total</label>
-                        <input
-                            type="text"
-                            className="input bg-gray-100 font-bold text-blue-700"
-                            value={formatIndianCurrency(calculatedTotals.total)}
-                            readOnly
-                        />
-                    </div>
+                {/* Total (Auto-calculated) */}
+                <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                    <p className="text-sm text-gray-700 mb-1">Product Total (Billed Weight × Rate)</p>
+                    <p className="text-2xl font-bold text-blue-700">
+                        {formatIndianCurrency(calculatedTotals.total)}
+                    </p>
+                    {formData.actual_weight_kg && formData.actual_weight_kg !== formData.qty_kg && (
+                        <p className="text-sm text-gray-600 mt-2">
+                            <span className="font-semibold">Note:</span> Vendor will be paid based on billed weight. Stock will be added based on actual received weight.
+                        </p>
+                    )}
                 </div>
 
                 <details className="rounded-lg border border-gray-200 p-4">
