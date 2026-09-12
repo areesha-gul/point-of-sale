@@ -227,7 +227,7 @@ export default function PaymentForm() {
                 <form onSubmit={handleSubmitExpense} className="card form-card mb-6 space-y-4">
                     <div className="bg-orange-50 border border-orange-200 rounded p-3 mb-4">
                         <p className="text-sm text-orange-800">
-                            <strong>Business Expenses:</strong> Record any business expenses like utilities, rent, salaries, transportation, etc. The expense will be automatically divided: <strong>Iftekhar Ahmad (40%), Shaukat Rang Illahi (40%), Bank (20%)</strong> and deducted from your cash or bank account.
+                            <strong>Business Expenses:</strong> Record any business expenses like utilities, rent, salaries, transportation, etc. The expense will reduce your net profit, which is then divided among partners.
                         </p>
                     </div>
                     <div className="form-grid grid-cols-1 md:grid-cols-2">
@@ -283,8 +283,8 @@ export default function PaymentForm() {
                     <h2 className="form-section-title">Expense History</h2>
                     {expenseList.length === 0 ? <p className="text-gray-600">No expenses recorded yet.</p> : 
                     <table className="w-full">
-                        <thead><tr className="border-b-2"><th className="text-left py-3 px-4">Date</th><th className="text-left py-3 px-4">Category</th><th className="text-left py-3 px-4">Description</th><th className="text-right py-3 px-4">Total</th><th className="text-right py-3 px-4">Iftekhar (2/5)</th><th className="text-right py-3 px-4">Shaukat (2/5)</th><th className="text-right py-3 px-4">Bank (1/5)</th><th className="text-center py-3 px-4">Action</th></tr></thead>
-                        <tbody>{expenseList.map(expense => <tr className="border-b" key={expense.id}><td className="py-3 px-4">{formatDate(expense.date)}</td><td className="py-3 px-4"><span className="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded">{expense.category}</span></td><td className="py-3 px-4">{expense.description}</td><td className="py-3 px-4 text-right font-bold text-red-600">{formatIndianCurrency(expense.amount)}</td><td className="py-3 px-4 text-right text-orange-600">{formatIndianCurrency(expense.iftekhar_share || 0)}</td><td className="py-3 px-4 text-right text-orange-600">{formatIndianCurrency(expense.shaukat_share || 0)}</td><td className="py-3 px-4 text-right text-orange-600">{formatIndianCurrency(expense.bank_share || 0)}</td><td className="py-3 px-4 text-center"><button className="btn-danger text-sm" onClick={() => handleDeleteExpense(expense)}>Delete</button></td></tr>)}</tbody>
+                        <thead><tr className="border-b-2"><th className="text-left py-3 px-4">Date</th><th className="text-left py-3 px-4">Category</th><th className="text-left py-3 px-4">Description</th><th className="text-left py-3 px-4">Method</th><th className="text-right py-3 px-4">Amount</th><th className="text-center py-3 px-4">Action</th></tr></thead>
+                        <tbody>{expenseList.map(expense => <tr className="border-b" key={expense.id}><td className="py-3 px-4">{formatDate(expense.date)}</td><td className="py-3 px-4"><span className="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded">{expense.category}</span></td><td className="py-3 px-4">{expense.description}</td><td className="py-3 px-4 capitalize">{expense.method}</td><td className="py-3 px-4 text-right font-bold text-red-600">{formatIndianCurrency(expense.amount)}</td><td className="py-3 px-4 text-center"><button className="btn-danger text-sm" onClick={() => handleDeleteExpense(expense)}>Delete</button></td></tr>)}</tbody>
                     </table>}
                 </div>
             </>

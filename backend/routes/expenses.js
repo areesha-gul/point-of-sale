@@ -45,22 +45,16 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // Calculate partner shares (2:2:1 ratio)
-        const totalAmount = Number(amount);
-        const iftekharShare = totalAmount * 2 / 5;  // 40%
-        const shaukatShare = totalAmount * 2 / 5;   // 40%
-        const bankShare = totalAmount * 1 / 5;      // 20%
-
         const result = await withTransaction(async (client) => {
             const expenseId = await generateExpenseId();
             
             const inserted = await client.query(`
-                INSERT INTO expenses (expense_id, category, description, amount, iftekhar_share, shaukat_share, bank_share, method, bank_account_id, date, notes)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
-            `, [expenseId, category, description, totalAmount, iftekharShare, shaukatShare, bankShare, method, bank_account_id, date, notes]);
+                INSERT INTO expenses (expense_id, category, description, amount, method, bank_account_id, date, notes)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
+            `, [expenseId, category, description, amount, method, bank_account_id, date, notes]);
 
             // Update account balance (subtract expense)
-            await AccountingService.updateAccountBalance(method, totalAmount, 'subtract', client, bank_account_id);
+            await AccountingService.updateAccountBalance(method, amount, 'subtract', client, bank_account_id);
 
             return inserted.rows[0];
         });

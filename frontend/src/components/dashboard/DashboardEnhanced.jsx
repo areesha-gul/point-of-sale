@@ -79,13 +79,18 @@ export default function DashboardEnhanced() {
                 </div>
 
                 <div className="card bg-green-50 border-2 border-green-200">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1">Profit This Month</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">Net Profit This Month</h3>
                     <p className="text-3xl font-bold text-green-700">
                         {formatIndianCurrency(kpis?.totalProfit || 0)}
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                        Sales minus product cost
-                    </p>
+                    <div className="text-xs text-gray-600 mt-2 space-y-1">
+                        <p>Sales - Purchases - Expenses</p>
+                        {kpis?.totalExpenses > 0 && (
+                            <p className="text-orange-700 font-semibold">
+                                Expenses: {formatIndianCurrency(kpis?.totalExpenses)}
+                            </p>
+                        )}
+                    </div>
                 </div>
 
                 <div className="card bg-orange-50 border-2 border-orange-200">
@@ -101,14 +106,13 @@ export default function DashboardEnhanced() {
 
             <div className="card border-2 border-emerald-200 bg-emerald-50">
                 <h2 className="text-xl font-bold text-emerald-900">Profit division this month</h2>
-                <p className="mt-1 text-sm text-emerald-800">Total profit divided into 5 parts: Iftekhar Ahmad (2), Shaukat Rang Illahi (2), Bank loan (1)</p>
+                <p className="mt-1 text-sm text-emerald-800">Net profit (after expenses) divided into 5 parts: Iftekhar Ahmad (2), Shaukat Rang Illahi (2), Bank loan (1)</p>
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                     <div className="rounded-lg bg-white p-4 border border-emerald-200">
                         <p className="font-semibold text-gray-700">Iftekhar Ahmad · 2/5 share</p>
                         <p className="text-2xl font-bold text-emerald-700 mt-1">{formatIndianCurrency(kpis?.profitSplit?.iftekhar_ahmad || 0)}</p>
                         <div className="mt-2 pt-2 border-t border-emerald-100 text-sm">
                             <p className="text-gray-600">Withdrawn: <span className="font-semibold text-red-600">{formatIndianCurrency(kpis?.profitWithdrawals?.iftekhar_ahmad || 0)}</span></p>
-                            <p className="text-gray-600 mt-1">Expenses (2/5): <span className="font-semibold text-orange-600">{formatIndianCurrency(kpis?.expensesByPartner?.iftekhar_ahmad || 0)}</span></p>
                             <p className="text-gray-600 mt-1">Remaining: <span className="font-semibold text-blue-600">{formatIndianCurrency(kpis?.profitRemaining?.iftekhar_ahmad || 0)}</span></p>
                         </div>
                     </div>
@@ -117,7 +121,6 @@ export default function DashboardEnhanced() {
                         <p className="text-2xl font-bold text-emerald-700 mt-1">{formatIndianCurrency(kpis?.profitSplit?.shaukat_rang_illahi || 0)}</p>
                         <div className="mt-2 pt-2 border-t border-emerald-100 text-sm">
                             <p className="text-gray-600">Withdrawn: <span className="font-semibold text-red-600">{formatIndianCurrency(kpis?.profitWithdrawals?.shaukat_rang_illahi || 0)}</span></p>
-                            <p className="text-gray-600 mt-1">Expenses (2/5): <span className="font-semibold text-orange-600">{formatIndianCurrency(kpis?.expensesByPartner?.shaukat_rang_illahi || 0)}</span></p>
                             <p className="text-gray-600 mt-1">Remaining: <span className="font-semibold text-blue-600">{formatIndianCurrency(kpis?.profitRemaining?.shaukat_rang_illahi || 0)}</span></p>
                         </div>
                     </div>
@@ -126,7 +129,6 @@ export default function DashboardEnhanced() {
                         <p className="text-2xl font-bold text-emerald-700 mt-1">{formatIndianCurrency(kpis?.profitSplit?.bank || 0)}</p>
                         <div className="mt-2 pt-2 border-t border-emerald-100 text-sm">
                             <p className="text-gray-600">Paid: <span className="font-semibold text-red-600">{formatIndianCurrency(kpis?.profitWithdrawals?.bank || 0)}</span></p>
-                            <p className="text-gray-600 mt-1">Expenses (1/5): <span className="font-semibold text-orange-600">{formatIndianCurrency(kpis?.expensesByPartner?.bank || 0)}</span></p>
                             <p className="text-gray-600 mt-1">Remaining: <span className="font-semibold text-blue-600">{formatIndianCurrency(kpis?.profitRemaining?.bank || 0)}</span></p>
                         </div>
                     </div>
