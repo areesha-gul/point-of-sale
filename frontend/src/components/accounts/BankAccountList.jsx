@@ -14,6 +14,7 @@ export default function BankAccountList() {
     const [accountList, setAccountList] = useState([]);
     const [formData, setFormData] = useState(initialForm);
     const [showForm, setShowForm] = useState(false);
+    const [editingAccount, setEditingAccount] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -39,19 +40,49 @@ export default function BankAccountList() {
         setSaving(true);
         setError('');
         try {
-            await bankAccounts.create({
-                ...formData,
-                type: 'bank',
-                opening_balance: Number(formData.opening_balance) || 0
-            });
+            if (editingAccount) {
+                // Update existing account
+                await bankAccounts.update(editingAccount.id, {
+                    ...formData,
+                    opening_balance: Number(formData.opening_balance) || 0
+                });
+            } else {
+                // Create new account
+                await bankAccounts.create({
+                    ...formData,
+                    type: 'bank',
+                    opening_balance: Number(formData.opening_balance) || 0
+                });
+            }
             setFormData(initialForm);
             setShowForm(false);
+            setEditingAccount(null);
             await loadAccounts();
         } catch (err) {
             setError(err.response?.data?.error || 'Could not save bank account');
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleEdit = (account) => {
+        setEditingAccount(account);
+        setFormData({
+            name: account.name,
+            bank_name: account.bank_name || '',
+            account_number: account.account_number || '',
+            opening_balance: account.opening_balance,
+            opening_balance_date: account.opening_balance_date || ''
+        });
+        setShowForm(true);
+        setError('');
+    };
+
+    const handleCancelEdit = () => {
+        setFormData(initialForm);
+        setShowForm(false);
+        setEditingAccount(null);
+        setError('');
     };
 
     const handleDelete = async (account) => {
@@ -87,7 +118,16 @@ export default function BankAccountList() {
 
             {showForm && (
                 <form onSubmit={handleSubmit} className="card form-card mb-6">
-                    <h2 className="form-section-title">New bank account</h2>
+                    <h2 className="form-section-title">
+                        {editingAccount ? 'Edit bank account' : 'New bank account'}
+                    </h2>
+                    {editingAccount && (
+                        <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+                            <p className="text-sm text-blue-800">
+                                <strong>Note:</strong> Changing the opening balance will adjust the current balance by the difference. Current balance: <strong>{formatIndianCurrency(editingAccount.current_balance)}</strong>
+                            </p>
+                        </div>
+                    )}
                     <div className="form-grid grid-cols-1 md:grid-cols-2">
                         <div>
                             <label className="label">Account name *</label>
@@ -102,8 +142,15 @@ export default function BankAccountList() {
                             <input className="input" placeholder="Optional" value={formData.account_number} onChange={event => setFormData({ ...formData, account_number: event.target.value })} />
                         </div>
                         <div>
-                            <label className="label">Starting balance (₨) *</label>
+                            <label className="label">
+                                {editingAccount ? 'Opening balance (₨)' : 'Starting balance (₨)'} *
+                            </label>
                             <input className="input" type="number" min="0" step="0.01" value={formData.opening_balance} onChange={event => setFormData({ ...formData, opening_balance: event.target.value })} required />
+                            {editingAccount && (
+                                <p className="text-xs text-gray-600 mt-1">
+                                    Previous: {formatIndianCurrency(editingAccount.opening_balance)}
+                                </p>
+                            )}
                         </div>
                         <div>
                             <label className="label">Balance date</label>
@@ -112,8 +159,10 @@ export default function BankAccountList() {
                     </div>
                     {error && <p className="form-error">{error}</p>}
                     <div className="form-actions">
-                        <button className="btn-success" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Bank Account'}</button>
-                        <button className="btn-secondary" type="button" onClick={() => setShowForm(false)}>Cancel</button>
+                        <button className="btn-success" type="submit" disabled={saving}>
+                            {saving ? 'Saving...' : (editingAccount ? 'Update Account' : 'Save Bank Account')}
+                        </button>
+                        <button className="btn-secondary" type="button" onClick={handleCancelEdit}>Cancel</button>
                     </div>
                 </form>
             )}
@@ -127,12 +176,21 @@ export default function BankAccountList() {
                                 <h2 className="text-xl font-bold">{account.name}</h2>
                                 <p className="text-gray-600">{account.bank_name || 'Bank account'}</p>
                                 {account.account_number && <p className="mt-1 text-sm text-gray-500">Account: {account.account_number}</p>}
+                                {account.opening_balance > 0 && (
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Opening: {formatIndianCurrency(account.opening_balance)}
+                                        {account.opening_balance_date && ` (${formatDate(account.opening_balance_date)})`}
+                                    </p>
+                                )}
                             </div>
                             <div className="text-right">
                                 <p className="text-sm text-gray-600">Current balance</p>
                                 <p className="text-2xl font-bold text-blue-700">{formatIndianCurrency(account.current_balance)}</p>
-                                <button className="btn-danger mt-2 text-sm" onClick={() => handleDelete(account)}>Remove</button>
-                                <button className="btn-secondary mt-2 text-sm" onClick={() => toggleHistory(account)}>In / Out History</button>
+                                <div className="flex gap-2 mt-2 justify-end">
+                                    <button className="btn-primary text-sm" onClick={() => handleEdit(account)}>Edit</button>
+                                    <button className="btn-danger text-sm" onClick={() => handleDelete(account)}>Remove</button>
+                                </div>
+                                <button className="btn-secondary mt-2 text-sm w-full" onClick={() => toggleHistory(account)}>In / Out History</button>
                             </div>
                         </div>
                         {history[account.id] && <div className="mt-4 border-t pt-3"><p className="mb-2 font-bold">Bank movements</p>{history[account.id].length === 0 ? <p className="text-sm text-gray-600">No movements yet.</p> : history[account.id].map((item, index) => <div className="flex justify-between border-b py-2 text-sm" key={`${item.id}-${index}`}><span>{formatDate(item.date)} - {item.description}</span><span className={item.direction === 'in' ? 'font-bold text-green-700' : 'font-bold text-red-700'}>{item.direction === 'in' ? '+' : '-'}{formatIndianCurrency(item.amount)}</span></div>)}</div>}

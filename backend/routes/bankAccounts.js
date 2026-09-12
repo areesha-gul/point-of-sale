@@ -32,10 +32,44 @@ router.put('/:id', async (req, res) => {
     try {
         const current = (await query('SELECT * FROM cash_bank_accounts WHERE id = $1', [req.params.id])).rows[0];
         if (!current) return res.status(404).json({ error: 'Account not found' });
-        const { name, account_number, bank_name } = req.body;
-        const result = await query('UPDATE cash_bank_accounts SET name = $1, account_number = $2, bank_name = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *', [name || current.name, account_number || current.account_number, bank_name || current.bank_name, req.params.id]);
+        
+        const { name, account_number, bank_name, opening_balance, opening_balance_date } = req.body;
+        
+        // Calculate the difference if opening balance is being updated
+        let balanceDifference = 0;
+        if (opening_balance !== undefined && opening_balance !== null) {
+            const newOpeningBalance = Number(opening_balance);
+            const oldOpeningBalance = Number(current.opening_balance);
+            balanceDifference = newOpeningBalance - oldOpeningBalance;
+        }
+        
+        // Update account details
+        const result = await query(`
+            UPDATE cash_bank_accounts 
+            SET name = $1, 
+                account_number = $2, 
+                bank_name = $3,
+                opening_balance = $4,
+                opening_balance_date = $5,
+                current_balance = current_balance + $6,
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE id = $7 
+            RETURNING *
+        `, [
+            name || current.name, 
+            account_number !== undefined ? account_number : current.account_number, 
+            bank_name !== undefined ? bank_name : current.bank_name,
+            opening_balance !== undefined ? opening_balance : current.opening_balance,
+            opening_balance_date !== undefined ? opening_balance_date : current.opening_balance_date,
+            balanceDifference,
+            req.params.id
+        ]);
+        
         res.json(result.rows[0]);
-    } catch (error) { res.status(500).json({ error: 'Failed to update account' }); }
+    } catch (error) { 
+        console.error('Error updating account:', error);
+        res.status(500).json({ error: 'Failed to update account' }); 
+    }
 });
 
 router.delete('/:id', async (req, res) => {
