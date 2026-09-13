@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { purchases, vendors, products, bankAccounts as bankAccountsApi } from '../../services/api';
-import { formatIndianCurrency, getTodayDate } from '../../services/formatter';
+import { formatIndianCurrency, getTodayDate, formatDateForInput } from '../../services/formatter';
 
 export default function PurchaseEdit() {
     const { id } = useParams();
@@ -58,23 +58,7 @@ export default function PurchaseEdit() {
 
             const purchase = purchaseRes.data;
             
-            // Populate form with existing data
-            setFormData({
-                vendor_id: String(purchase.vendor_id),
-                product_id: String(purchase.product_id),
-                qty_kg: purchase.qty_kg,
-                actual_weight_kg: purchase.actual_weight_kg || '',
-                rate: purchase.rate,
-                freight_charges: purchase.freight_charges || '0',
-                other_charges: purchase.other_charges || '0',
-                amount_paid: purchase.amount_paid || '0',
-                payment_method: purchase.payment_method || 'none',
-                bank_account_id: purchase.bank_account_id ? String(purchase.bank_account_id) : '',
-                date: purchase.date,
-                notes: purchase.notes || '',
-                is_direct_delivery: purchase.is_direct_delivery || 0
-            });
-
+            // Set lists first
             setVendorList(vendorsRes.data);
             setProductList(productsRes.data);
             setBankAccounts(bankAccountsRes.data);
@@ -85,8 +69,26 @@ export default function PurchaseEdit() {
             setSelectedVendor(vendor);
             setSelectedProduct(product);
 
+            // Then populate form with existing data (after lists are set)
+            setFormData({
+                vendor_id: String(purchase.vendor_id),
+                product_id: String(purchase.product_id),
+                qty_kg: String(purchase.qty_kg),
+                actual_weight_kg: purchase.actual_weight_kg ? String(purchase.actual_weight_kg) : '',
+                rate: String(purchase.rate),
+                freight_charges: String(purchase.freight_charges || 0),
+                other_charges: String(purchase.other_charges || 0),
+                amount_paid: String(purchase.amount_paid || 0),
+                payment_method: purchase.payment_method || 'none',
+                bank_account_id: purchase.bank_account_id ? String(purchase.bank_account_id) : '',
+                date: formatDateForInput(purchase.date),
+                notes: purchase.notes || '',
+                is_direct_delivery: purchase.is_direct_delivery || 0
+            });
+
         } catch (err) {
             setError('Failed to load purchase data');
+            console.error('Load error:', err);
         } finally {
             setLoading(false);
         }

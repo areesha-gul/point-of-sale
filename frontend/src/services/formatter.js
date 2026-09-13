@@ -56,12 +56,27 @@ export function formatQuantity(qty, unit = 'KG') {
 }
 
 /**
- * Format date for display
+ * Format date for display (DD/MM/YYYY)
  */
 export function formatDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN');
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
+/**
+ * Format date for input fields (YYYY-MM-DD)
+ */
+export function formatDateForInput(dateString) {
+    if (!dateString) return getTodayDate();
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**
@@ -69,7 +84,10 @@ export function formatDate(dateString) {
  */
 export function getTodayDate() {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**
