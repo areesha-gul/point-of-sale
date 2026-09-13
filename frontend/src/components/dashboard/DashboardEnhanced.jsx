@@ -127,8 +127,8 @@ export default function DashboardEnhanced() {
                     </p>
                 </div>
 
-                <h2 className="text-xl font-bold text-emerald-900">Profit division for {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</h2>
-                <p className="mt-1 text-sm text-emerald-800">Net profit (after expenses) divided into 5 parts: Iftekhar Ahmad (2), Shaukat Rang Illahi (2), Bank loan (1)</p>
+                <h2 className="text-xl font-bold text-emerald-900">Profit division up to {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</h2>
+                <p className="mt-1 text-sm text-emerald-800">Cumulative net profit (after expenses) divided into 5 parts: Iftekhar Ahmad (2), Shaukat Rang Illahi (2), Bank loan (1)</p>
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                     <div className="rounded-lg bg-white p-4 border border-emerald-200">
                         <p className="font-semibold text-gray-700">Iftekhar Ahmad · 2/5 share</p>

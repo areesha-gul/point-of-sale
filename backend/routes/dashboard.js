@@ -191,20 +191,20 @@ router.get('/kpis', async (req, res) => {
         const totalProfit = Number(mtdRevenue.revenue) - Number(mtdCost.cost) - Number(mtdExpenses.total);
         const totalProfitUpToMonth = Number(cumulativeRevenue.revenue) - Number(cumulativeCost.cost) - Number(cumulativeExpenses.total);
         const profitSplit = {
-            iftekhar_ahmad: totalProfit * 2 / 5,
-            shaukat_rang_illahi: totalProfit * 2 / 5,
-            bank: totalProfit / 5
+            iftekhar_ahmad: totalProfitUpToMonth * 2 / 5,
+            shaukat_rang_illahi: totalProfitUpToMonth * 2 / 5,
+            bank: totalProfitUpToMonth / 5
         };
 
-        // Get cumulative withdrawals (MTD) by recipient
+        // Get cumulative withdrawals by recipient up to selected month
         const withdrawals = (await query(`
             SELECT 
                 recipient,
                 COALESCE(SUM(amount), 0) as total_withdrawn
             FROM profit_withdrawals
-            WHERE date >= $1 AND date < $2
+            WHERE date < $1
             GROUP BY recipient
-        `, [start, end])).rows;
+        `, [end])).rows;
 
         const withdrawalsByRecipient = {
             iftekhar_ahmad: 0,
@@ -217,7 +217,7 @@ router.get('/kpis', async (req, res) => {
             withdrawalsByRecipient[key] = Number(w.total_withdrawn);
         });
 
-        // Calculate remaining amounts
+        // Calculate remaining cumulative amounts up to selected month
         const profitRemaining = {
             iftekhar_ahmad: profitSplit.iftekhar_ahmad - withdrawalsByRecipient.iftekhar_ahmad,
             shaukat_rang_illahi: profitSplit.shaukat_rang_illahi - withdrawalsByRecipient.shaukat_rang_illahi,
