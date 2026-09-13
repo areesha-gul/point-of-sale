@@ -33,7 +33,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { vendor_id, product_id, qty_kg, actual_weight_kg, rate, freight_charges = 0, other_charges = 0, amount_paid = 0, payment_method = 'none', bank_account_id, date, notes, is_direct_delivery = 0 } = req.body;
+        const { vendor_id, product_id, qty_kg, actual_weight_kg, rate, freight_charges = 0, other_charges = 0, round_off = 0, amount_paid = 0, payment_method = 'none', bank_account_id, date, notes, is_direct_delivery = 0 } = req.body;
         if (!vendor_id || !product_id || !qty_kg || !rate || !date) return res.status(400).json({ error: 'Missing required fields' });
         if (qty_kg <= 0 || rate <= 0) return res.status(400).json({ error: 'Quantity and rate must be positive' });
         if (actual_weight_kg && actual_weight_kg <= 0) return res.status(400).json({ error: 'Actual weight must be positive if provided' });
@@ -45,14 +45,14 @@ router.post('/', async (req, res) => {
         const weightDifference = actualWeight ? actualWeight - Number(qty_kg) : null;
         
         const total = Number(qty_kg) * Number(rate);
-        const grandTotal = total - Number(freight_charges) + Number(other_charges);
-        if (grandTotal < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
+        const grandTotal = total - Number(freight_charges) + Number(other_charges) - Number(round_off);
+        if (grandTotal < 0) return res.status(400).json({ error: 'Total cannot be negative' });
         if (amount_paid < 0 || amount_paid > grandTotal) return res.status(400).json({ error: 'Payment amount cannot exceed grand total' });
         const purchaseId = await generatePurchaseId();
         const result = await query(`
-            INSERT INTO purchases (purchase_id, vendor_id, product_id, qty_kg, actual_weight_kg, weight_difference, rate, total, freight_charges, other_charges, grand_total, amount_paid, payment_method, bank_account_id, date, notes, is_direct_delivery, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'draft') RETURNING id
-        `, [purchaseId, vendor_id, product_id, qty_kg, actualWeight, weightDifference, rate, total, freight_charges, other_charges, grandTotal, amount_paid, payment_method, bank_account_id || null, date, notes, is_direct_delivery]);
+            INSERT INTO purchases (purchase_id, vendor_id, product_id, qty_kg, actual_weight_kg, weight_difference, rate, total, freight_charges, other_charges, round_off, grand_total, amount_paid, payment_method, bank_account_id, date, notes, is_direct_delivery, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'draft') RETURNING id
+        `, [purchaseId, vendor_id, product_id, qty_kg, actualWeight, weightDifference, rate, total, freight_charges, other_charges, round_off, grandTotal, amount_paid, payment_method, bank_account_id || null, date, notes, is_direct_delivery]);
         const purchase = (await query(`${purchaseDetails} WHERE p.id = $1`, [result.rows[0].id])).rows[0];
         res.status(201).json({ ...purchase, message: 'Purchase created as draft. Click Approve to finalize.' });
     } catch (error) { res.status(500).json({ error: 'Failed to create purchase', message: error.message }); }
@@ -80,17 +80,18 @@ router.put('/:id', async (req, res) => {
     try {
         const existing = (await query('SELECT * FROM purchases WHERE id = $1 AND status = $2', [req.params.id, 'draft'])).rows[0];
         if (!existing) return res.status(404).json({ error: 'Purchase not found or cannot be edited' });
-        const { vendor_id, product_id, qty_kg, actual_weight_kg, rate, freight_charges, other_charges, amount_paid, payment_method, bank_account_id, date, notes, is_direct_delivery } = req.body;
+        const { vendor_id, product_id, qty_kg, actual_weight_kg, rate, freight_charges, other_charges, round_off, amount_paid, payment_method, bank_account_id, date, notes, is_direct_delivery } = req.body;
         const qty = qty_kg ?? existing.qty_kg; const unitRate = rate ?? existing.rate;
         const freight = freight_charges ?? existing.freight_charges; const other = other_charges ?? existing.other_charges;
+        const roundOff = round_off ?? existing.round_off;
         
         // Calculate weight difference if actual weight provided
         const actualWeight = actual_weight_kg !== undefined ? (actual_weight_kg || null) : existing.actual_weight_kg;
         const weightDifference = actualWeight ? Number(actualWeight) - Number(qty) : null;
         
-        const total = Number(qty) * Number(unitRate); const grandTotal = total - Number(freight) + Number(other);
-        if (grandTotal < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
-        const result = await query(`UPDATE purchases SET vendor_id = $1, product_id = $2, qty_kg = $3, actual_weight_kg = $4, weight_difference = $5, rate = $6, total = $7, freight_charges = $8, other_charges = $9, grand_total = $10, amount_paid = $11, payment_method = $12, bank_account_id = $13, date = $14, notes = $15, is_direct_delivery = $16, updated_at = CURRENT_TIMESTAMP WHERE id = $17 RETURNING id`, [vendor_id ?? existing.vendor_id, product_id ?? existing.product_id, qty, actualWeight, weightDifference, unitRate, total, freight, other, grandTotal, amount_paid ?? existing.amount_paid, payment_method || existing.payment_method, bank_account_id ?? existing.bank_account_id, date || existing.date, notes ?? existing.notes, is_direct_delivery ?? existing.is_direct_delivery, req.params.id]);
+        const total = Number(qty) * Number(unitRate); const grandTotal = total - Number(freight) + Number(other) - Number(roundOff);
+        if (grandTotal < 0) return res.status(400).json({ error: 'Total cannot be negative' });
+        const result = await query(`UPDATE purchases SET vendor_id = $1, product_id = $2, qty_kg = $3, actual_weight_kg = $4, weight_difference = $5, rate = $6, total = $7, freight_charges = $8, other_charges = $9, round_off = $10, grand_total = $11, amount_paid = $12, payment_method = $13, bank_account_id = $14, date = $15, notes = $16, is_direct_delivery = $17, updated_at = CURRENT_TIMESTAMP WHERE id = $18 RETURNING id`, [vendor_id ?? existing.vendor_id, product_id ?? existing.product_id, qty, actualWeight, weightDifference, unitRate, total, freight, other, roundOff, grandTotal, amount_paid ?? existing.amount_paid, payment_method || existing.payment_method, bank_account_id ?? existing.bank_account_id, date || existing.date, notes ?? existing.notes, is_direct_delivery ?? existing.is_direct_delivery, req.params.id]);
         res.json((await query(`${purchaseDetails} WHERE p.id = $1`, [result.rows[0].id])).rows[0]);
     } catch (error) { res.status(500).json({ error: 'Failed to update purchase' }); }
 });

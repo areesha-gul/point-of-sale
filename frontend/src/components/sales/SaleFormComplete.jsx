@@ -22,6 +22,7 @@ export default function SaleFormComplete() {
         qty_kg: '',
         rate: '',
         freight_charges: '0',
+        round_off: '0',
         amount_paid: '0',
         payment_method: 'none',
         bank_account_id: '',
@@ -42,7 +43,7 @@ export default function SaleFormComplete() {
 
     useEffect(() => {
         calculateTotals();
-    }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.amount_paid]);
+    }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.round_off, formData.amount_paid]);
 
     const loadData = async () => {
         try {
@@ -66,9 +67,10 @@ export default function SaleFormComplete() {
         const qty = parseFloat(formData.qty_kg) || 0;
         const rate = parseFloat(formData.rate) || 0;
         const freight = parseFloat(formData.freight_charges) || 0;
+        const roundOff = parseFloat(formData.round_off) || 0;
         const paid = parseFloat(formData.amount_paid) || 0;
 
-        const total = Math.max(0, qty * rate - freight);
+        const total = Math.max(0, qty * rate - freight - roundOff);
         const remaining_receivable = total - paid;
 
         setCalculatedTotals({ total, remaining_receivable });
@@ -102,6 +104,7 @@ export default function SaleFormComplete() {
                 qty_kg: parseFloat(formData.qty_kg),
                 rate: parseFloat(formData.rate),
                 freight_charges: parseFloat(formData.freight_charges) || 0,
+                round_off: parseFloat(formData.round_off) || 0,
                 amount_paid: parseFloat(formData.amount_paid),
                 payment_method: formData.payment_method,
                 bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id) : null,
@@ -120,6 +123,7 @@ export default function SaleFormComplete() {
                 qty_kg: '',
                 rate: '',
                 freight_charges: '0',
+                round_off: '0',
                 amount_paid: '0',
                 payment_method: 'none',
                 bank_account_id: '',
@@ -258,6 +262,19 @@ export default function SaleFormComplete() {
                             value={formData.freight_charges}
                             onChange={(e) => setFormData({ ...formData, freight_charges: e.target.value })}
                         />
+                    </div>
+
+                    <div>
+                        <label className="label">Round Off (Subtract) (₨)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            className="input"
+                            value={formData.round_off}
+                            onChange={(e) => setFormData({ ...formData, round_off: e.target.value })}
+                            placeholder="e.g., 1.25 to subtract"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">Enter the amount to subtract from the total</p>
                     </div>
 
                     {/* Total (Auto-calculated) */}

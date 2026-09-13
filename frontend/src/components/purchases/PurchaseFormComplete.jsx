@@ -26,6 +26,7 @@ export default function PurchaseFormComplete() {
         rate: '',
         freight_charges: '0',
         other_charges: '0',
+        round_off: '0',
         amount_paid: '0',
         payment_method: 'none',
         bank_account_id: '',
@@ -51,7 +52,7 @@ export default function PurchaseFormComplete() {
 
     useEffect(() => {
         calculateTotals();
-    }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.other_charges, formData.amount_paid]);
+    }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.other_charges, formData.round_off, formData.amount_paid]);
 
     const loadData = async () => {
         const results = await Promise.allSettled([
@@ -86,10 +87,11 @@ export default function PurchaseFormComplete() {
         const rate = parseFloat(formData.rate) || 0;
         const freight = parseFloat(formData.freight_charges) || 0;
         const other = parseFloat(formData.other_charges) || 0;
+        const roundOff = parseFloat(formData.round_off) || 0;
         const paid = parseFloat(formData.amount_paid) || 0;
 
         const total = qty * rate;
-        const grand_total = Math.max(0, total - freight + other);
+        const grand_total = Math.max(0, total - freight + other - roundOff);
         const remaining_payable = grand_total - paid;
 
         setCalculatedTotals({ total, grand_total, remaining_payable });
@@ -125,6 +127,7 @@ export default function PurchaseFormComplete() {
                 rate: parseFloat(formData.rate),
                 freight_charges: parseFloat(formData.freight_charges),
                 other_charges: parseFloat(formData.other_charges),
+                round_off: parseFloat(formData.round_off),
                 amount_paid: parseFloat(formData.amount_paid),
                 payment_method: formData.payment_method,
                 bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id) : null,
@@ -146,6 +149,7 @@ export default function PurchaseFormComplete() {
                 rate: '',
                 freight_charges: '0',
                 other_charges: '0',
+                round_off: '0',
                 amount_paid: '0',
                 payment_method: 'none',
                 bank_account_id: '',
@@ -320,7 +324,7 @@ export default function PurchaseFormComplete() {
 
                 <details className="rounded-lg border border-gray-200 p-4">
                     <summary className="cursor-pointer text-lg font-bold text-blue-700">Optional charges</summary>
-                <div className="form-grid mt-4 grid-cols-1 md:grid-cols-2">
+                <div className="form-grid mt-4 grid-cols-1 md:grid-cols-3">
                     {/* Freight Charges */}
                     <div>
                         <label className="label">Freight Charges (₨)</label>
@@ -346,12 +350,26 @@ export default function PurchaseFormComplete() {
                             onChange={(e) => setFormData({ ...formData, other_charges: e.target.value })}
                         />
                     </div>
+
+                    {/* Round Off */}
+                    <div>
+                        <label className="label">Round Off (Subtract) (₨)</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            className="input"
+                            value={formData.round_off}
+                            onChange={(e) => setFormData({ ...formData, round_off: e.target.value })}
+                            placeholder="e.g., 1.25 to subtract"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">This amount is subtracted from the grand total</p>
+                    </div>
                 </div>
                 </details>
 
                 {/* Grand Total */}
                 <div className="bg-blue-50 border-2 border-blue-300 p-4 rounded-lg">
-                    <p className="text-lg font-medium">Grand Total (Product - Freight + Other)</p>
+                    <p className="text-lg font-medium">Grand Total (Product - Freight + Other + Round Off)</p>
                     <p className="text-3xl font-bold text-blue-700">
                         {formatIndianCurrency(calculatedTotals.grand_total)}
                     </p>

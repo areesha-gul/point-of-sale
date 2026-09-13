@@ -43,11 +43,11 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { customer_id, product_id, qty_kg, rate, freight_charges = 0, amount_paid = 0, payment_method = 'none', bank_account_id = null, date, notes } = req.body;
+        const { customer_id, product_id, qty_kg, rate, freight_charges = 0, round_off = 0, amount_paid = 0, payment_method = 'none', bank_account_id = null, date, notes } = req.body;
         if (!customer_id || !product_id || !qty_kg || !rate || !date) return res.status(400).json({ error: 'Missing required fields' });
         if (qty_kg <= 0 || rate <= 0) return res.status(400).json({ error: 'Quantity and rate must be positive' });
-        const total = Number(qty_kg) * Number(rate) - Number(freight_charges);
-        if (total < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
+        const total = Number(qty_kg) * Number(rate) - Number(freight_charges) - Number(round_off);
+        if (total < 0) return res.status(400).json({ error: 'Total cannot be negative' });
         if (amount_paid < 0 || amount_paid > total) return res.status(400).json({ error: 'Invalid payment amount' });
         if (payment_method === 'bank' && !bank_account_id) return res.status(400).json({ error: 'Select the bank account receiving this payment' });
         if (bank_account_id && !(await query("SELECT id FROM cash_bank_accounts WHERE id = $1 AND type = 'bank' AND is_active = 1", [bank_account_id])).rows[0]) return res.status(400).json({ error: 'Selected bank account was not found' });
@@ -57,9 +57,9 @@ router.post('/', async (req, res) => {
         if (!(await query('SELECT id FROM customers WHERE id = $1', [customer_id])).rows[0]) return res.status(404).json({ error: 'Customer not found' });
         const saleId = await generateSaleId();
         const result = await query(`
-            INSERT INTO sales (sale_id, customer_id, product_id, qty_kg, rate, total, freight_charges, amount_paid, payment_method, bank_account_id, date, notes, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'draft') RETURNING id
-        `, [saleId, customer_id, product_id, qty_kg, rate, total, freight_charges, amount_paid, payment_method, bank_account_id, date, notes]);
+            INSERT INTO sales (sale_id, customer_id, product_id, qty_kg, rate, total, freight_charges, round_off, amount_paid, payment_method, bank_account_id, date, notes, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'draft') RETURNING id
+        `, [saleId, customer_id, product_id, qty_kg, rate, total, freight_charges, round_off, amount_paid, payment_method, bank_account_id, date, notes]);
         const sale = (await query(`${saleDetails} WHERE s.id = $1`, [result.rows[0].id])).rows[0];
         res.status(201).json({ ...sale, message: 'Sale created as draft. Click Approve to finalize.' });
     } catch (error) {
@@ -95,12 +95,13 @@ router.put('/:id', async (req, res) => {
     try {
         const existing = (await query('SELECT * FROM sales WHERE id = $1 AND status = $2', [req.params.id, 'draft'])).rows[0];
         if (!existing) return res.status(404).json({ error: 'Sale not found or cannot be edited' });
-        const { customer_id, product_id, qty_kg, rate, freight_charges, amount_paid, payment_method, bank_account_id, date, notes } = req.body;
+        const { customer_id, product_id, qty_kg, rate, freight_charges, round_off, amount_paid, payment_method, bank_account_id, date, notes } = req.body;
         const values = [customer_id || existing.customer_id, product_id || existing.product_id, qty_kg || existing.qty_kg, rate || existing.rate];
         const freight = freight_charges ?? existing.freight_charges ?? 0;
-        const total = Number(values[2]) * Number(values[3]) - Number(freight);
-        if (total < 0) return res.status(400).json({ error: 'Freight cannot be greater than the product total' });
-        const updated = await query(`UPDATE sales SET customer_id = $1, product_id = $2, qty_kg = $3, rate = $4, total = $5, freight_charges = $6, amount_paid = $7, payment_method = $8, bank_account_id = $9, date = $10, notes = $11, updated_at = CURRENT_TIMESTAMP WHERE id = $12 RETURNING id`, [...values, total, freight, amount_paid ?? existing.amount_paid, payment_method || existing.payment_method, bank_account_id ?? existing.bank_account_id, date || existing.date, notes ?? existing.notes, req.params.id]);
+        const roundOff = round_off ?? existing.round_off ?? 0;
+        const total = Number(values[2]) * Number(values[3]) - Number(freight) - Number(roundOff);
+        if (total < 0) return res.status(400).json({ error: 'Total cannot be negative' });
+        const updated = await query(`UPDATE sales SET customer_id = $1, product_id = $2, qty_kg = $3, rate = $4, total = $5, freight_charges = $6, round_off = $7, amount_paid = $8, payment_method = $9, bank_account_id = $10, date = $11, notes = $12, updated_at = CURRENT_TIMESTAMP WHERE id = $13 RETURNING id`, [...values, total, freight, roundOff, amount_paid ?? existing.amount_paid, payment_method || existing.payment_method, bank_account_id ?? existing.bank_account_id, date || existing.date, notes ?? existing.notes, req.params.id]);
         res.json((await query(`${saleDetails} WHERE s.id = $1`, [updated.rows[0].id])).rows[0]);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update sale' });

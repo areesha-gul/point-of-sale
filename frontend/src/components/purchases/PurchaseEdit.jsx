@@ -23,6 +23,7 @@ export default function PurchaseEdit() {
         rate: '',
         freight_charges: '0',
         other_charges: '0',
+        round_off: '0',
         amount_paid: '0',
         payment_method: 'none',
         bank_account_id: '',
@@ -45,7 +46,7 @@ export default function PurchaseEdit() {
 
     useEffect(() => {
         calculateTotals();
-    }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.other_charges, formData.amount_paid]);
+    }, [formData.qty_kg, formData.rate, formData.freight_charges, formData.other_charges, formData.round_off, formData.amount_paid]);
 
     const loadData = async () => {
         try {
@@ -89,6 +90,7 @@ export default function PurchaseEdit() {
                 rate: String(purchase.rate),
                 freight_charges: String(purchase.freight_charges || 0),
                 other_charges: String(purchase.other_charges || 0),
+                round_off: String(purchase.round_off || 0),
                 amount_paid: String(purchase.amount_paid || 0),
                 payment_method: purchase.payment_method || 'none',
                 bank_account_id: purchase.bank_account_id ? String(purchase.bank_account_id) : '',
@@ -113,10 +115,11 @@ export default function PurchaseEdit() {
         const rate = parseFloat(formData.rate) || 0;
         const freight = parseFloat(formData.freight_charges) || 0;
         const other = parseFloat(formData.other_charges) || 0;
+        const roundOff = parseFloat(formData.round_off) || 0;
         const paid = parseFloat(formData.amount_paid) || 0;
 
         const total = qty * rate;
-        const grand_total = Math.max(0, total - freight + other);
+        const grand_total = Math.max(0, total - freight + other - roundOff);
         const remaining_payable = grand_total - paid;
 
         setCalculatedTotals({ total, grand_total, remaining_payable });
@@ -152,6 +155,7 @@ export default function PurchaseEdit() {
                 rate: parseFloat(formData.rate),
                 freight_charges: parseFloat(formData.freight_charges),
                 other_charges: parseFloat(formData.other_charges),
+                round_off: parseFloat(formData.round_off) || 0,
                 amount_paid: parseFloat(formData.amount_paid),
                 payment_method: formData.payment_method,
                 bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id) : null,
@@ -306,7 +310,7 @@ export default function PurchaseEdit() {
 
                 <details className="rounded-lg border border-gray-200 p-4">
                     <summary className="cursor-pointer text-lg font-bold text-blue-700">Optional charges</summary>
-                    <div className="form-grid mt-4 grid-cols-1 md:grid-cols-2">
+                    <div className="form-grid mt-4 grid-cols-1 md:grid-cols-3">
                         <div>
                             <label className="label">Freight Charges (₨)</label>
                             <input
@@ -327,6 +331,18 @@ export default function PurchaseEdit() {
                                 className="input"
                                 value={formData.other_charges}
                                 onChange={(e) => setFormData({ ...formData, other_charges: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="label">Round Off (Subtract) (₨)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="input"
+                                value={formData.round_off}
+                                onChange={(e) => setFormData({ ...formData, round_off: e.target.value })}
+                                placeholder="e.g., 1.25"
                             />
                         </div>
                     </div>
