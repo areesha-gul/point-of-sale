@@ -99,7 +99,7 @@ export default function DashboardEnhanced() {
                         {(kpis?.pendingPurchases || 0) + (kpis?.pendingSales || 0)}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                        {kpis?.pendingPurchases || 0} purchases, {kpis?.pendingSales || 0} sales
+                        {kpis?.pendingPurchases || 0} purchase{(kpis?.pendingPurchases || 0) !== 1 ? 's' : ''}, {kpis?.pendingSales || 0} sale{(kpis?.pendingSales || 0) !== 1 ? 's' : ''}
                     </p>
                 </div>
             </div>

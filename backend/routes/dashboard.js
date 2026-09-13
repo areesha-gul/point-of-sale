@@ -202,10 +202,9 @@ router.get('/kpis', async (req, res) => {
             profitSplit,
             profitWithdrawals: withdrawalsByRecipient,
             profitRemaining,
-            pendingPurchases,
-            pendingSales,
-            pendingPayments,
-            totalPending: pendingPurchases + pendingSales + pendingPayments
+            pendingPurchases: Number(pendingPurchases),
+            pendingSales: Number(pendingSales),
+            pendingPayments: Number(pendingPayments)
         });
     } catch (error) {
         console.error('Error fetching KPIs:', error);
