@@ -203,7 +203,7 @@ export default function PurchaseEdit() {
                         <label className="label">Select Vendor *</label>
                         <select
                             className="input select-input"
-                            value={formData.vendor_id}
+                            value={String(formData.vendor_id || '')}
                             onChange={handleVendorChange}
                             required
                         >
@@ -229,7 +229,7 @@ export default function PurchaseEdit() {
                         <label className="label">Select Product *</label>
                         <select
                             className="input select-input"
-                            value={formData.product_id}
+                            value={String(formData.product_id || '')}
                             onChange={handleProductChange}
                             required
                         >

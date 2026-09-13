@@ -13,6 +13,7 @@ import CustomerLedger from './components/customers/CustomerLedger';
 import VendorList from './components/vendors/VendorList';
 import VendorLedger from './components/vendors/VendorLedger';
 import SaleFormComplete from './components/sales/SaleFormComplete';
+import SaleEdit from './components/sales/SaleEdit';
 import SaleList from './components/sales/SaleList';
 import PurchaseFormComplete from './components/purchases/PurchaseFormComplete';
 import PurchaseEdit from './components/purchases/PurchaseEdit';
@@ -106,6 +107,7 @@ function App() {
           <Route path="vendors" element={<VendorList />} />
           <Route path="vendors/:id/ledger" element={<VendorLedger />} />
           <Route path="sales/new" element={<SaleFormComplete />} />
+          <Route path="sales/edit/:id" element={<SaleEdit />} />
           <Route path="sales/list" element={<SaleList />} />
           <Route path="purchases/new" element={<PurchaseFormComplete />} />
           <Route path="purchases/edit/:id" element={<PurchaseEdit />} />

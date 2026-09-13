@@ -88,6 +88,7 @@ export const sales = {
     getAll: (status) => api.get('/sales', status ? { params: { status } } : undefined),
     getById: (id) => api.get(`/sales/${id}`),
     create: (data) => api.post('/sales', data),
+    update: (id, data) => api.put(`/sales/${id}`, data),
     approve: (id) => api.post(`/sales/${id}/approve`),
     remove: (id) => api.delete(`/sales/${id}`)
 };
@@ -96,6 +97,7 @@ export const sales = {
 export const purchases = {
     getById: (id) => api.get(`/purchases/${id}`),
     create: (data) => api.post('/purchases', data),
+    update: (id, data) => api.put(`/purchases/${id}`, data),
     getAll: (status) => api.get('/purchases', status ? { params: { status } } : undefined),
     approve: (id) => api.post(`/purchases/${id}/approve`),
     remove: (id) => api.delete(`/purchases/${id}`)
