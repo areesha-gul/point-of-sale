@@ -3,9 +3,23 @@ const { query } = require('../database/postgres');
 
 const router = express.Router();
 
+const getMonthRange = (monthValue) => {
+    const target = monthValue ? new Date(`${monthValue}-01T00:00:00`) : new Date();
+    const start = new Date(target.getFullYear(), target.getMonth(), 1);
+    const end = new Date(target.getFullYear(), target.getMonth() + 1, 1);
+
+    return {
+        start: start.toISOString().split('T')[0],
+        end: end.toISOString().split('T')[0]
+    };
+};
+
 // Get dashboard summary
 router.get('/', async (req, res) => {
     try {
+        const month = req.query.month || new Date().toISOString().slice(0, 7);
+        const { start, end } = getMonthRange(month);
+
         // Total receivables (sum of all customer balances)
         const receivablesResult = (await query('SELECT COALESCE(SUM(current_balance), 0) as total FROM customers')).rows[0];
         const totalReceivables = Number(receivablesResult.total);
@@ -35,26 +49,26 @@ router.get('/', async (req, res) => {
         const customerCount = (await query('SELECT COUNT(*) as count FROM customers')).rows[0].count;
         const vendorCount = (await query('SELECT COUNT(*) as count FROM vendors')).rows[0].count;
 
-        // Recent transactions (last 10)
+        // Recent transactions (last 10) for selected month
         const recentSales = (await query(`
             SELECT 'sale' as type, s.id, s.date, s.total as amount, c.name as party_name, p.name as product_name
             FROM sales s
             JOIN customers c ON s.customer_id = c.id
             JOIN products p ON s.product_id = p.id
-            WHERE s.status = 'approved'
+            WHERE s.status = 'approved' AND s.date >= $1 AND s.date < $2
             ORDER BY s.date DESC, s.id DESC
             LIMIT 5
-        `)).rows;
+        `, [start, end])).rows;
 
         const recentPurchases = (await query(`
             SELECT 'purchase' as type, p.id, p.date, p.grand_total as amount, v.name as party_name, pr.name as product_name
             FROM purchases p
             JOIN vendors v ON p.vendor_id = v.id
             JOIN products pr ON p.product_id = pr.id
-            WHERE p.status = 'approved'
+            WHERE p.status = 'approved' AND p.date >= $1 AND p.date < $2
             ORDER BY p.date DESC, p.id DESC
             LIMIT 5
-        `)).rows;
+        `, [start, end])).rows;
 
         // Combine and sort recent transactions
         const recentTransactions = [...recentSales, ...recentPurchases]
@@ -115,8 +129,10 @@ router.get('/', async (req, res) => {
 // Get KPIs (Today's sale, MTD sale, Total profit, Pending approvals)
 router.get('/kpis', async (req, res) => {
     try {
+        const month = req.query.month || new Date().toISOString().slice(0, 7);
+        const { start, end } = getMonthRange(month);
+
         const today = new Date().toISOString().split('T')[0];
-        const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
         // Today's sale
         const todaySale = (await query(`
@@ -125,32 +141,32 @@ router.get('/kpis', async (req, res) => {
             WHERE date = $1 AND status = 'approved'
         `, [today])).rows[0];
 
-        // Month to date sale
+        // Selected month sale
         const mtdSale = (await query(`
             SELECT COALESCE(SUM(total), 0) as total
             FROM sales
-            WHERE date >= $1 AND status = 'approved'
-        `, [firstDayOfMonth])).rows[0];
+            WHERE date >= $1 AND date < $2 AND status = 'approved'
+        `, [start, end])).rows[0];
 
-        // Total profit (MTD) - Total Sales - Total Purchases (actual cost paid)
+        // Total profit for selected month - Total Sales - Total Purchases (actual cost paid)
         const mtdRevenue = (await query(`
             SELECT COALESCE(SUM(total), 0) as revenue
             FROM sales
-            WHERE date >= $1 AND status = 'approved'
-        `, [firstDayOfMonth])).rows[0];
+            WHERE date >= $1 AND date < $2 AND status = 'approved'
+        `, [start, end])).rows[0];
 
         const mtdCost = (await query(`
             SELECT COALESCE(SUM(grand_total), 0) as cost
             FROM purchases
-            WHERE date >= $1 AND status = 'approved'
-        `, [firstDayOfMonth])).rows[0];
+            WHERE date >= $1 AND date < $2 AND status = 'approved'
+        `, [start, end])).rows[0];
 
-        // Total expenses (MTD)
+        // Total expenses for selected month
         const mtdExpenses = (await query(`
             SELECT COALESCE(SUM(amount), 0) as total
             FROM expenses
-            WHERE date >= $1
-        `, [firstDayOfMonth])).rows[0];
+            WHERE date >= $1 AND date < $2
+        `, [start, end])).rows[0];
 
         // Net Profit = Revenue - Purchases - Expenses
         const totalProfit = Number(mtdRevenue.revenue) - Number(mtdCost.cost) - Number(mtdExpenses.total);
@@ -166,9 +182,9 @@ router.get('/kpis', async (req, res) => {
                 recipient,
                 COALESCE(SUM(amount), 0) as total_withdrawn
             FROM profit_withdrawals
-            WHERE date >= $1
+            WHERE date >= $1 AND date < $2
             GROUP BY recipient
-        `, [firstDayOfMonth])).rows;
+        `, [start, end])).rows;
 
         const withdrawalsByRecipient = {
             iftekhar_ahmad: 0,

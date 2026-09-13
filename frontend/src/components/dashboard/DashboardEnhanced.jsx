@@ -10,16 +10,17 @@ export default function DashboardEnhanced() {
     const [kpis, setKpis] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
 
     useEffect(() => {
-        loadDashboard();
-    }, []);
+        loadDashboard(selectedMonth);
+    }, [selectedMonth]);
 
-    const loadDashboard = async () => {
+    const loadDashboard = async (month) => {
         try {
             const [dashboardRes, kpiRes] = await Promise.all([
-                dashboard.getSummary(),
-                dashboard.getKpis().then(response => response.data).catch(() => null)
+                dashboard.getSummary(month),
+                dashboard.getKpis(month).then(response => response.data).catch(() => null)
             ]);
             
             setData(dashboardRes.data);
@@ -44,16 +45,27 @@ export default function DashboardEnhanced() {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <h1 className="text-3xl font-bold">{t('dashboard')}</h1>
-                <div className="text-sm text-gray-600">
-                    {new Date().toLocaleDateString('en-IN', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                    })}
+                <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="monthSelector">
+                        Select month
+                    </label>
+                    <input
+                        id="monthSelector"
+                        type="month"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                 </div>
+            </div>
+
+            <div className="text-sm text-gray-600">
+                {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { 
+                    month: 'long', 
+                    year: 'numeric' 
+                })}
             </div>
 
             {/* KPI Cards Row 1 - Sales & Profit */}
@@ -69,17 +81,17 @@ export default function DashboardEnhanced() {
                 </div>
 
                 <div className="card bg-purple-50 border-2 border-purple-200">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1">Month to Date Sale</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">Sale for Selected Month</h3>
                     <p className="text-3xl font-bold text-purple-700">
                         {formatIndianCurrency(kpis?.mtdSale || 0)}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                        This month total
+                        {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
                     </p>
                 </div>
 
                 <div className="card bg-green-50 border-2 border-green-200">
-                    <h3 className="text-sm font-medium text-gray-700 mb-1">Net Profit This Month</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">Net Profit for Selected Month</h3>
                     <p className="text-3xl font-bold text-green-700">
                         {formatIndianCurrency(kpis?.totalProfit || 0)}
                     </p>
@@ -105,7 +117,7 @@ export default function DashboardEnhanced() {
             </div>
 
             <div className="card border-2 border-emerald-200 bg-emerald-50">
-                <h2 className="text-xl font-bold text-emerald-900">Profit division this month</h2>
+                <h2 className="text-xl font-bold text-emerald-900">Profit division for {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</h2>
                 <p className="mt-1 text-sm text-emerald-800">Net profit (after expenses) divided into 5 parts: Iftekhar Ahmad (2), Shaukat Rang Illahi (2), Bank loan (1)</p>
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                     <div className="rounded-lg bg-white p-4 border border-emerald-200">

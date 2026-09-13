@@ -135,8 +135,8 @@ export const settlements = {
 
 // Dashboard
 export const dashboard = {
-    getSummary: () => api.get('/dashboard'),
-    getKpis: () => api.get('/dashboard/kpis')
+    getSummary: (month) => api.get('/dashboard', { params: month ? { month } : {} }),
+    getKpis: (month) => api.get('/dashboard/kpis', { params: month ? { month } : {} })
 };
 
 // Reports
