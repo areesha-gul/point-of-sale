@@ -60,8 +60,8 @@ export default function PurchaseEdit() {
             
             // Populate form with existing data
             setFormData({
-                vendor_id: purchase.vendor_id,
-                product_id: purchase.product_id,
+                vendor_id: String(purchase.vendor_id),
+                product_id: String(purchase.product_id),
                 qty_kg: purchase.qty_kg,
                 actual_weight_kg: purchase.actual_weight_kg || '',
                 rate: purchase.rate,
@@ -69,7 +69,7 @@ export default function PurchaseEdit() {
                 other_charges: purchase.other_charges || '0',
                 amount_paid: purchase.amount_paid || '0',
                 payment_method: purchase.payment_method || 'none',
-                bank_account_id: purchase.bank_account_id || '',
+                bank_account_id: purchase.bank_account_id ? String(purchase.bank_account_id) : '',
                 date: purchase.date,
                 notes: purchase.notes || '',
                 is_direct_delivery: purchase.is_direct_delivery || 0
