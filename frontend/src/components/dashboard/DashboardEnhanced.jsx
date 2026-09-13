@@ -102,9 +102,6 @@ export default function DashboardEnhanced() {
                                 Expenses: {formatIndianCurrency(kpis?.totalExpenses)}
                             </p>
                         )}
-                        <p className="text-emerald-800 font-semibold mt-2">
-                            Total Profit Up to Month: {formatIndianCurrency(kpis?.totalProfitUpToMonth || 0)}
-                        </p>
                     </div>
                 </div>
 
@@ -120,6 +117,16 @@ export default function DashboardEnhanced() {
             </div>
 
             <div className="card border-2 border-emerald-200 bg-emerald-50">
+                <div className="rounded-2xl border-2 border-emerald-300 bg-white p-6 mb-5 shadow-sm">
+                    <p className="text-sm font-medium text-emerald-700 uppercase tracking-wide">Total Profit Up to Selected Month</p>
+                    <p className="mt-3 text-4xl font-extrabold text-emerald-900">
+                        {formatIndianCurrency(kpis?.totalProfitUpToMonth || 0)}
+                    </p>
+                    <p className="mt-2 text-sm text-emerald-700">
+                        For {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                    </p>
+                </div>
+
                 <h2 className="text-xl font-bold text-emerald-900">Profit division for {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</h2>
                 <p className="mt-1 text-sm text-emerald-800">Net profit (after expenses) divided into 5 parts: Iftekhar Ahmad (2), Shaukat Rang Illahi (2), Bank loan (1)</p>
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
