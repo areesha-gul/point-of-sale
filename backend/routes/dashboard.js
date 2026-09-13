@@ -168,8 +168,28 @@ router.get('/kpis', async (req, res) => {
             WHERE date >= $1 AND date < $2
         `, [start, end])).rows[0];
 
+        // Total profit up to selected month: sum from beginning of records to end of selected month
+        const cumulativeRevenue = (await query(`
+            SELECT COALESCE(SUM(total), 0) as revenue
+            FROM sales
+            WHERE date < $1 AND status = 'approved'
+        `, [end])).rows[0];
+
+        const cumulativeCost = (await query(`
+            SELECT COALESCE(SUM(grand_total), 0) as cost
+            FROM purchases
+            WHERE date < $1 AND status = 'approved'
+        `, [end])).rows[0];
+
+        const cumulativeExpenses = (await query(`
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM expenses
+            WHERE date < $1
+        `, [end])).rows[0];
+
         // Net Profit = Revenue - Purchases - Expenses
         const totalProfit = Number(mtdRevenue.revenue) - Number(mtdCost.cost) - Number(mtdExpenses.total);
+        const totalProfitUpToMonth = Number(cumulativeRevenue.revenue) - Number(cumulativeCost.cost) - Number(cumulativeExpenses.total);
         const profitSplit = {
             iftekhar_ahmad: totalProfit * 2 / 5,
             shaukat_rang_illahi: totalProfit * 2 / 5,
@@ -214,6 +234,7 @@ router.get('/kpis', async (req, res) => {
             todaySaleCount: Number(todaySale.count),
             mtdSale: Number(mtdSale.total),
             totalProfit,
+            totalProfitUpToMonth,
             totalExpenses: Number(mtdExpenses.total),
             profitSplit,
             profitWithdrawals: withdrawalsByRecipient,

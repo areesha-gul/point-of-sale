@@ -102,6 +102,9 @@ export default function DashboardEnhanced() {
                                 Expenses: {formatIndianCurrency(kpis?.totalExpenses)}
                             </p>
                         )}
+                        <p className="text-emerald-800 font-semibold mt-2">
+                            Total Profit Up to Month: {formatIndianCurrency(kpis?.totalProfitUpToMonth || 0)}
+                        </p>
                     </div>
                 </div>
 
