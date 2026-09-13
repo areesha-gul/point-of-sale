@@ -21,10 +21,10 @@ export default function PurchaseEdit() {
         qty_kg: '',
         actual_weight_kg: '',
         rate: '',
-        freight_charges: '0',
-        other_charges: '0',
-        round_off: '0',
-        amount_paid: '0',
+        freight_charges: '',
+        other_charges: '',
+        round_off: '',
+        amount_paid: '',
         payment_method: 'none',
         bank_account_id: '',
         date: getTodayDate(),
@@ -88,10 +88,10 @@ export default function PurchaseEdit() {
                 qty_kg: String(purchase.qty_kg),
                 actual_weight_kg: purchase.actual_weight_kg ? String(purchase.actual_weight_kg) : '',
                 rate: String(purchase.rate),
-                freight_charges: String(purchase.freight_charges || 0),
-                other_charges: String(purchase.other_charges || 0),
-                round_off: String(purchase.round_off || 0),
-                amount_paid: String(purchase.amount_paid || 0),
+                freight_charges: purchase.freight_charges ? String(purchase.freight_charges) : '',
+                other_charges: purchase.other_charges ? String(purchase.other_charges) : '',
+                round_off: purchase.round_off ? String(purchase.round_off) : '',
+                amount_paid: purchase.amount_paid ? String(purchase.amount_paid) : '',
                 payment_method: purchase.payment_method || 'none',
                 bank_account_id: purchase.bank_account_id ? String(purchase.bank_account_id) : '',
                 date: formatDateForInput(purchase.date),
@@ -197,6 +197,17 @@ export default function PurchaseEdit() {
             )}
 
             <form onSubmit={handleSubmit} className="card form-card space-y-4">
+                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                    <label className="label">Purchase Date *</label>
+                    <input
+                        type="date"
+                        className="input"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        required
+                    />
+                </div>
+
                 <div className="form-grid grid-cols-1 md:grid-cols-2">
                     {/* Vendor Selection */}
                     <div>
@@ -407,16 +418,6 @@ export default function PurchaseEdit() {
                 </details>
 
                 <div className="form-grid grid-cols-1 md:grid-cols-2">
-                    <div>
-                        <label className="label">Purchase Date *</label>
-                        <input
-                            type="date"
-                            className="input"
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            required
-                        />
-                    </div>
                     <div>
                         <label className="label">Notes</label>
                         <textarea

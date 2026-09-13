@@ -21,9 +21,9 @@ export default function SaleFormComplete() {
         product_id: '',
         qty_kg: '',
         rate: '',
-        freight_charges: '0',
-        round_off: '0',
-        amount_paid: '0',
+        freight_charges: '',
+        round_off: '',
+        amount_paid: '',
         payment_method: 'none',
         bank_account_id: '',
         date: getTodayDate(),
@@ -122,9 +122,9 @@ export default function SaleFormComplete() {
                 product_id: '',
                 qty_kg: '',
                 rate: '',
-                freight_charges: '0',
-                round_off: '0',
-                amount_paid: '0',
+                freight_charges: '',
+                round_off: '',
+                amount_paid: '',
                 payment_method: 'none',
                 bank_account_id: '',
                 date: getTodayDate(),
@@ -166,6 +166,17 @@ export default function SaleFormComplete() {
             )}
 
             <form onSubmit={handleSubmit} className="card form-card space-y-4">
+                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                    <label className="label">Sale Date *</label>
+                    <input
+                        type="date"
+                        className="input"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        required
+                    />
+                </div>
+
                 <div className="form-grid grid-cols-1 md:grid-cols-2">
                     {/* Customer Selection */}
                     <div>
@@ -328,17 +339,6 @@ export default function SaleFormComplete() {
                         />
                     </div>
 
-                    {/* Date */}
-                    <div>
-                        <label className="label">Sale Date *</label>
-                        <input
-                            type="date"
-                            className="input"
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            required
-                        />
-                    </div>
                 </div>
                 </details>
 

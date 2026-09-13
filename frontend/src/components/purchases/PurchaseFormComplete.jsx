@@ -24,10 +24,10 @@ export default function PurchaseFormComplete() {
         qty_kg: '',
         actual_weight_kg: '',
         rate: '',
-        freight_charges: '0',
-        other_charges: '0',
-        round_off: '0',
-        amount_paid: '0',
+        freight_charges: '',
+        other_charges: '',
+        round_off: '',
+        amount_paid: '',
         payment_method: 'none',
         bank_account_id: '',
         date: getTodayDate(),
@@ -147,10 +147,10 @@ export default function PurchaseFormComplete() {
                 qty_kg: '',
                 actual_weight_kg: '',
                 rate: '',
-                freight_charges: '0',
-                other_charges: '0',
-                round_off: '0',
-                amount_paid: '0',
+                freight_charges: '',
+                other_charges: '',
+                round_off: '',
+                amount_paid: '',
                 payment_method: 'none',
                 bank_account_id: '',
                 date: getTodayDate(),
@@ -197,6 +197,17 @@ export default function PurchaseFormComplete() {
             )}
 
             <form onSubmit={handleSubmit} className="card form-card space-y-4">
+                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                    <label className="label">Purchase Date *</label>
+                    <input
+                        type="date"
+                        className="input"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        required
+                    />
+                </div>
+
                 <div className="form-grid grid-cols-1 md:grid-cols-2">
                     {/* Vendor Selection */}
                     <div>
@@ -437,20 +448,8 @@ export default function PurchaseFormComplete() {
                 </div>
 
                 <details className="rounded-lg border border-gray-200 p-4">
-                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Date and delivery</summary>
+                    <summary className="cursor-pointer text-lg font-bold text-blue-700">Delivery</summary>
                 <div className="form-grid mt-4 grid-cols-1 md:grid-cols-2">
-                    {/* Date */}
-                    <div>
-                        <label className="label">Purchase Date *</label>
-                        <input
-                            type="date"
-                            className="input"
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            required
-                        />
-                    </div>
-
                     {/* Direct Delivery */}
                     <div className="flex items-center">
                         <label className="flex items-center cursor-pointer">
