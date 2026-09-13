@@ -58,19 +58,30 @@ export default function PurchaseEdit() {
 
             const purchase = purchaseRes.data;
             
+            console.log('Purchase data:', purchase);
+            console.log('Vendor ID:', purchase.vendor_id, 'Type:', typeof purchase.vendor_id);
+            console.log('Product ID:', purchase.product_id, 'Type:', typeof purchase.product_id);
+            
             // Set lists first
             setVendorList(vendorsRes.data);
             setProductList(productsRes.data);
             setBankAccounts(bankAccountsRes.data);
 
+            console.log('Vendors:', vendorsRes.data);
+            console.log('Products:', productsRes.data);
+
             // Set selected vendor and product
             const vendor = vendorsRes.data.find(v => v.id === purchase.vendor_id);
             const product = productsRes.data.find(p => p.id === purchase.product_id);
+            
+            console.log('Found vendor:', vendor);
+            console.log('Found product:', product);
+            
             setSelectedVendor(vendor);
             setSelectedProduct(product);
 
             // Then populate form with existing data (after lists are set)
-            setFormData({
+            const formValues = {
                 vendor_id: String(purchase.vendor_id),
                 product_id: String(purchase.product_id),
                 qty_kg: String(purchase.qty_kg),
@@ -84,7 +95,10 @@ export default function PurchaseEdit() {
                 date: formatDateForInput(purchase.date),
                 notes: purchase.notes || '',
                 is_direct_delivery: purchase.is_direct_delivery || 0
-            });
+            };
+            
+            console.log('Form values to set:', formValues);
+            setFormData(formValues);
 
         } catch (err) {
             setError('Failed to load purchase data');
