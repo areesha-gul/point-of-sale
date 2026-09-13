@@ -15,6 +15,7 @@ import VendorLedger from './components/vendors/VendorLedger';
 import SaleFormComplete from './components/sales/SaleFormComplete';
 import SaleList from './components/sales/SaleList';
 import PurchaseFormComplete from './components/purchases/PurchaseFormComplete';
+import PurchaseEdit from './components/purchases/PurchaseEdit';
 import PurchaseList from './components/purchases/PurchaseList';
 import PaymentForm from './components/payments/PaymentForm';
 import DirectSettlement from './components/payments/DirectSettlement';
@@ -107,6 +108,7 @@ function App() {
           <Route path="sales/new" element={<SaleFormComplete />} />
           <Route path="sales/list" element={<SaleList />} />
           <Route path="purchases/new" element={<PurchaseFormComplete />} />
+          <Route path="purchases/edit/:id" element={<PurchaseEdit />} />
           <Route path="purchases/list" element={<PurchaseList />} />
           <Route path="payments/new" element={<PaymentForm />} />
           <Route path="settlements/new" element={<DirectSettlement />} />
