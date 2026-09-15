@@ -25,23 +25,32 @@ export default function PaymentForm() {
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
-        try {
-            const [vendorsRes, customersRes, accountsRes, paymentsRes, profitRes, expensesRes] = await Promise.all([
-                vendors.getAll(), 
-                customers.getAll(), 
-                bankAccounts.getAll(), 
-                payments.getAll(),
-                profitWithdrawals.getAll(),
-                expenses.getAll()
-            ]);
-            setVendorList(vendorsRes.data.filter(item => Number(item.current_balance) > 0));
-            setCustomerList(customersRes.data.filter(item => Number(item.current_balance) > 0));
-            setAccountList(accountsRes.data.filter(item => item.type === 'bank'));
-            setPaymentList(paymentsRes.data);
-            setProfitWithdrawalList(profitRes.data);
-            setExpenseList(expensesRes.data);
-        } catch (err) { setError('Could not load payment data'); }
-        finally { setLoading(false); }
+        const results = await Promise.allSettled([
+            vendors.getAll(),
+            customers.getAll(),
+            bankAccounts.getAll(),
+            payments.getAll(),
+            profitWithdrawals.getAll(),
+            expenses.getAll()
+        ]);
+        const [vendorsResult, customersResult, accountsResult, paymentsResult, profitResult, expensesResult] = results;
+        const failedRequests = [];
+
+        if (vendorsResult.status === 'fulfilled') setVendorList(vendorsResult.value.data.filter(item => Number(item.current_balance) > 0));
+        else failedRequests.push('vendors');
+        if (customersResult.status === 'fulfilled') setCustomerList(customersResult.value.data.filter(item => Number(item.current_balance) > 0));
+        else failedRequests.push('customers');
+        if (accountsResult.status === 'fulfilled') setAccountList(accountsResult.value.data.filter(item => String(item.type).toLowerCase() === 'bank'));
+        else failedRequests.push('bank accounts');
+        if (paymentsResult.status === 'fulfilled') setPaymentList(paymentsResult.value.data);
+        else failedRequests.push('payments');
+        if (profitResult.status === 'fulfilled') setProfitWithdrawalList(profitResult.value.data);
+        else failedRequests.push('profit withdrawals');
+        if (expensesResult.status === 'fulfilled') setExpenseList(expensesResult.value.data);
+        else failedRequests.push('expenses');
+
+        setError(failedRequests.length > 0 ? `Could not load: ${failedRequests.join(', ')}. Please try again.` : '');
+        setLoading(false);
     };
 
     const partyList = formData.party_type === 'vendor' ? vendorList : customerList;
