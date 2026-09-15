@@ -25,21 +25,23 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { category, description, amount, method, bank_account_id = null, date, notes } = req.body;
+        const numericAmount = Number(amount);
+        const accountId = method === 'bank' && bank_account_id ? Number(bank_account_id) : null;
         
-        if (!category || !description || !amount || !method || !date) {
+        if (!category?.trim() || !description?.trim() || !method || !date || !Number.isFinite(numericAmount)) {
             return res.status(400).json({ error: 'Category, description, amount, method, and date are required' });
         }
 
-        if (!['cash', 'bank'].includes(method) || Number(amount) <= 0) {
+        if (!['cash', 'bank'].includes(method) || numericAmount <= 0) {
             return res.status(400).json({ error: 'Enter a valid amount and method' });
         }
 
-        if (method === 'bank' && !bank_account_id) {
+        if (method === 'bank' && (!Number.isInteger(accountId) || accountId <= 0)) {
             return res.status(400).json({ error: 'Select the bank account used for this expense' });
         }
 
-        if (bank_account_id) {
-            const accountCheck = await query("SELECT id FROM cash_bank_accounts WHERE id = $1 AND type = 'bank' AND is_active = 1", [bank_account_id]);
+        if (accountId) {
+            const accountCheck = await query("SELECT id FROM cash_bank_accounts WHERE id = $1 AND type = 'bank' AND is_active = 1", [accountId]);
             if (!accountCheck.rows[0]) {
                 return res.status(400).json({ error: 'Selected bank account was not found' });
             }
@@ -51,10 +53,10 @@ router.post('/', async (req, res) => {
             const inserted = await client.query(`
                 INSERT INTO expenses (expense_id, category, description, amount, method, bank_account_id, date, notes)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
-            `, [expenseId, category, description, amount, method, bank_account_id, date, notes]);
+            `, [expenseId, category.trim(), description.trim(), numericAmount, method, accountId, date, notes]);
 
             // Update account balance (subtract expense)
-            await AccountingService.updateAccountBalance(method, amount, 'subtract', client, bank_account_id);
+            await AccountingService.updateAccountBalance(method, numericAmount, 'subtract', client, accountId);
 
             return inserted.rows[0];
         });
@@ -62,7 +64,7 @@ router.post('/', async (req, res) => {
         res.status(201).json(result);
     } catch (error) {
         console.error('Error creating expense:', error);
-        res.status(500).json({ error: 'Failed to record expense' });
+        res.status(500).json({ error: 'Failed to record expense', message: error.message });
     }
 });
 

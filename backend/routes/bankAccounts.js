@@ -93,11 +93,46 @@ router.post('/withdrawal', (req, res) => createBankTransaction(req, res, 'withdr
 router.post('/transfer', async (req, res) => {
     try {
         const { from_account_id, to_account_id, amount, date, reference, notes } = req.body;
-        if (!from_account_id || !to_account_id || !amount || !date || from_account_id === to_account_id) return res.status(400).json({ error: 'Valid different accounts, amount, and date are required' });
+        const fromId = Number(from_account_id);
+        const toId = Number(to_account_id);
+        const numericAmount = Number(amount);
+        if (!Number.isInteger(fromId) || !Number.isInteger(toId) || fromId === toId || !Number.isFinite(numericAmount) || numericAmount <= 0 || !date) {
+            return res.status(400).json({ error: 'Valid different accounts, amount, and date are required' });
+        }
+
+        const accounts = (await query("SELECT id FROM cash_bank_accounts WHERE id IN ($1, $2) AND type = 'bank' AND is_active = 1", [fromId, toId])).rows;
+        if (accounts.length !== 2) return res.status(400).json({ error: 'Both selected accounts must be active bank accounts' });
+
         const id = await generateBankTransactionId();
-        const result = await query(`INSERT INTO bank_transactions (transaction_id, transaction_type, from_account_id, to_account_id, amount, date, reference, notes, status) VALUES ($1, 'transfer', $2, $3, $4, $5, $6, $7, 'draft') RETURNING *`, [id, from_account_id, to_account_id, amount, date, reference, notes]);
-        res.status(201).json({ ...result.rows[0], message: 'Transfer created as draft. Click Approve to finalize.' });
-    } catch (error) { res.status(500).json({ error: 'Failed to create transfer' }); }
+        const transfer = await withTransaction(async (client) => {
+            const accountResult = await client.query('SELECT id, current_balance FROM cash_bank_accounts WHERE id IN ($1, $2) FOR UPDATE', [fromId, toId]);
+            const source = accountResult.rows.find(account => Number(account.id) === fromId);
+            if (!source || Number(source.current_balance) < numericAmount) {
+                const error = new Error('Insufficient balance in the source account');
+                error.status = 400;
+                throw error;
+            }
+
+            const result = await client.query(`
+                INSERT INTO bank_transactions (transaction_id, transaction_type, from_account_id, to_account_id, amount, date, reference, notes, status, approved_at, approved_by)
+                VALUES ($1, 'transfer', $2, $3, $4, $5, $6, $7, 'approved', CURRENT_TIMESTAMP, $8) RETURNING *
+            `, [id, fromId, toId, numericAmount, date, reference, notes, req.user?.id || null]);
+            const transaction = result.rows[0];
+
+            await client.query('UPDATE cash_bank_accounts SET current_balance = current_balance - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [numericAmount, fromId]);
+            await client.query('UPDATE cash_bank_accounts SET current_balance = current_balance + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [numericAmount, toId]);
+            await client.query(`
+                INSERT INTO ledger_entries (ref_type, ref_id, party_type, party_id, account_type, debit, credit, date)
+                VALUES ('bank_transaction', $1, 'account', $2, 'bank', $3, 0, $4),
+                       ('bank_transaction', $1, 'account', $5, 'bank', 0, $3, $4)
+            `, [transaction.id, toId, numericAmount, date, fromId]);
+            return transaction;
+        });
+        res.status(201).json({ ...transfer, message: 'Transfer completed successfully' });
+    } catch (error) {
+        console.error('Error creating transfer:', error);
+        res.status(error.status || 500).json({ error: error.status ? error.message : 'Failed to create transfer', message: error.status ? undefined : error.message });
+    }
 });
 
 router.post('/:id/approve', async (req, res) => {

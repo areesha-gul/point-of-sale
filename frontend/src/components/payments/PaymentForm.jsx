@@ -94,7 +94,7 @@ export default function PaymentForm() {
             setSuccess('Expense recorded successfully!'); 
             setExpenseFormData(initialExpenseForm); 
             await loadData();
-        } catch (err) { setError(err.response?.data?.error || 'Could not record expense'); }
+        } catch (err) { setError(err.response?.data?.error || err.response?.data?.message || 'Could not record expense'); }
         finally { setSaving(false); }
     };
 

@@ -159,7 +159,8 @@ export const bankAccounts = {
     getAll: () => api.get('/bank-accounts'),
     create: (data) => api.post('/bank-accounts', data),
     update: (id, data) => api.put(`/bank-accounts/${id}`, data),
-    remove: (id) => api.delete(`/bank-accounts/${id}`)
+    remove: (id) => api.delete(`/bank-accounts/${id}`),
+    transfer: (data) => api.post('/bank-accounts/transfer', data)
 };
 
 // Inventory Adjustments

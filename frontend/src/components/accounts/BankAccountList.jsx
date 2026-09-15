@@ -10,10 +10,21 @@ const initialForm = {
     opening_balance_date: ''
 };
 
+const initialTransferForm = {
+    from_account_id: '',
+    to_account_id: '',
+    amount: '',
+    date: new Date().toISOString().slice(0, 10),
+    reference: '',
+    notes: ''
+};
+
 export default function BankAccountList() {
     const [accountList, setAccountList] = useState([]);
     const [formData, setFormData] = useState(initialForm);
     const [showForm, setShowForm] = useState(false);
+    const [showTransferForm, setShowTransferForm] = useState(false);
+    const [transferForm, setTransferForm] = useState(initialTransferForm);
     const [editingAccount, setEditingAccount] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -91,6 +102,27 @@ export default function BankAccountList() {
         catch (err) { setError(err.response?.data?.error || 'Could not remove bank account'); }
     };
 
+    const handleTransfer = async (event) => {
+        event.preventDefault();
+        setSaving(true);
+        setError('');
+        try {
+            await bankAccounts.transfer({
+                ...transferForm,
+                from_account_id: Number(transferForm.from_account_id),
+                to_account_id: Number(transferForm.to_account_id),
+                amount: Number(transferForm.amount)
+            });
+            setTransferForm(initialTransferForm);
+            setShowTransferForm(false);
+            await loadAccounts();
+        } catch (err) {
+            setError(err.response?.data?.error || 'Could not transfer funds');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const toggleHistory = async (account) => {
         if (history[account.id]) {
             setHistory({ ...history, [account.id]: null });
@@ -111,10 +143,52 @@ export default function BankAccountList() {
                     <h1 className="page-title">Bank Accounts</h1>
                     <p className="page-help">Add each account and enter its balance at the start.</p>
                 </div>
-                <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-                    + Add Bank Account
-                </button>
+                <div className="flex gap-2">
+                    <button className="btn-secondary" onClick={() => setShowTransferForm(!showTransferForm)}>Transfer Funds</button>
+                    <button className="btn-primary" onClick={() => setShowForm(!showForm)}>+ Add Bank Account</button>
+                </div>
             </div>
+
+            {showTransferForm && (
+                <form onSubmit={handleTransfer} className="card form-card mb-6">
+                    <h2 className="form-section-title">Transfer between bank accounts</h2>
+                    <p className="text-sm text-gray-600 mb-4">The transfer is completed immediately and both balances are updated together.</p>
+                    <div className="form-grid grid-cols-1 md:grid-cols-2">
+                        <div>
+                            <label className="label">From account *</label>
+                            <select className="input select-input" value={transferForm.from_account_id} onChange={event => setTransferForm({ ...transferForm, from_account_id: event.target.value })} required>
+                                <option value="">Choose source account...</option>
+                                {accountList.map(account => <option key={account.id} value={account.id}>{account.name} - {formatIndianCurrency(account.current_balance)}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="label">To account *</label>
+                            <select className="input select-input" value={transferForm.to_account_id} onChange={event => setTransferForm({ ...transferForm, to_account_id: event.target.value })} required>
+                                <option value="">Choose destination account...</option>
+                                {accountList.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="label">Amount (₨) *</label>
+                            <input className="input" type="number" min="0.01" step="0.01" value={transferForm.amount} onChange={event => setTransferForm({ ...transferForm, amount: event.target.value })} required />
+                        </div>
+                        <div>
+                            <label className="label">Date *</label>
+                            <input className="input" type="date" value={transferForm.date} onChange={event => setTransferForm({ ...transferForm, date: event.target.value })} required />
+                        </div>
+                        <div>
+                            <label className="label">Reference</label>
+                            <input className="input" placeholder="Optional" value={transferForm.reference} onChange={event => setTransferForm({ ...transferForm, reference: event.target.value })} />
+                        </div>
+                    </div>
+                    <textarea className="input mt-4" rows="2" placeholder="Notes (optional)" value={transferForm.notes} onChange={event => setTransferForm({ ...transferForm, notes: event.target.value })} />
+                    {error && <p className="form-error">{error}</p>}
+                    <div className="form-actions">
+                        <button className="btn-success" type="submit" disabled={saving}>{saving ? 'Transferring...' : 'Complete Transfer'}</button>
+                        <button className="btn-secondary" type="button" onClick={() => setShowTransferForm(false)}>Cancel</button>
+                    </div>
+                </form>
+            )}
 
             {showForm && (
                 <form onSubmit={handleSubmit} className="card form-card mb-6">

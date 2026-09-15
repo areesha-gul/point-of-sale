@@ -111,6 +111,39 @@ router.get('/:id/transactions', async (req, res) => {
             });
         });
 
+        const expensesResult = await query(`
+            SELECT e.id, e.date, e.amount, e.category, e.description, e.notes, 'expense' as type
+            FROM expenses e
+            WHERE e.method = $1
+                AND (e.method = 'cash' OR e.bank_account_id = $2)
+            ORDER BY e.date
+        `, [account.type, account.id]);
+
+        expensesResult.rows.forEach(expense => {
+            transactions.push({
+                ...expense,
+                direction: 'out',
+                description: expense.notes || `${expense.category} - ${expense.description}`
+            });
+        });
+
+        const bankTransactionsResult = await query(`
+            SELECT id, date, amount, transaction_type, from_account_id, to_account_id, reference, notes
+            FROM bank_transactions
+            WHERE status = 'approved' AND (from_account_id = $1 OR to_account_id = $1)
+            ORDER BY date
+        `, [account.id]);
+
+        bankTransactionsResult.rows.forEach(transaction => {
+            const incoming = Number(transaction.to_account_id) === Number(account.id);
+            transactions.push({
+                ...transaction,
+                type: 'bank_transaction',
+                direction: incoming ? 'in' : 'out',
+                description: transaction.notes || transaction.reference || `${transaction.transaction_type} ${incoming ? 'received' : 'sent'}`
+            });
+        });
+
         // Sort by date and calculate running balance
         transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
         
