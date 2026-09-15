@@ -68,8 +68,8 @@ export default function DashboardEnhanced() {
                 })}
             </div>
 
-            {/* KPI Cards Row 1 - Sales & Profit */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* KPI Cards Row 1 - Sales, Expenses & Profit */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
                 <div className="card bg-blue-50 border-2 border-blue-200">
                     <h3 className="text-sm font-medium text-gray-700 mb-1">Today's Sale</h3>
                     <p className="text-3xl font-bold text-blue-700">
@@ -90,7 +90,25 @@ export default function DashboardEnhanced() {
                     </p>
                 </div>
 
-                <div className="card bg-green-50 border-2 border-green-200">
+                <div className="card bg-orange-50 border-2 border-orange-200 lg:col-span-2">
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">Expenses for Selected Month</h3>
+                    <p className="text-3xl font-bold text-orange-700">
+                        {formatIndianCurrency(kpis?.totalExpenses || 0)}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                        {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                    </p>
+                </div>
+
+                <div className="card bg-red-50 border-2 border-red-200 lg:col-span-2">
+                    <h3 className="text-sm font-medium text-gray-700 mb-1">Total Expenses Overall</h3>
+                    <p className="text-3xl font-bold text-red-700">
+                        {formatIndianCurrency(kpis?.totalExpensesOverall || 0)}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">All recorded business expenses</p>
+                </div>
+
+                <div className="card bg-green-50 border-2 border-green-200 lg:col-span-2">
                     <h3 className="text-sm font-medium text-gray-700 mb-1">Net Profit for Selected Month</h3>
                     <p className="text-3xl font-bold text-green-700">
                         {formatIndianCurrency(kpis?.totalProfit || 0)}

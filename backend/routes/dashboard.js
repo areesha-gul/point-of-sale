@@ -168,6 +168,11 @@ router.get('/kpis', async (req, res) => {
             WHERE date >= $1 AND date < $2
         `, [start, end])).rows[0];
 
+        const overallExpenses = (await query(`
+            SELECT COALESCE(SUM(amount), 0) as total
+            FROM expenses
+        `)).rows[0];
+
         // Total profit up to selected month: sum from beginning of records to end of selected month
         const cumulativeRevenue = (await query(`
             SELECT COALESCE(SUM(total), 0) as revenue
@@ -236,6 +241,7 @@ router.get('/kpis', async (req, res) => {
             totalProfit,
             totalProfitUpToMonth,
             totalExpenses: Number(mtdExpenses.total),
+            totalExpensesOverall: Number(overallExpenses.total),
             profitSplit,
             profitWithdrawals: withdrawalsByRecipient,
             profitRemaining,
