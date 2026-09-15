@@ -13,17 +13,32 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { recipient, amount, method, bank_account_id = null, date, notes } = req.body;
-        if (!['Iftekhar Ahmad', 'Shaukat Rang Illahi', 'Bank'].includes(recipient) || !amount || !method || !date) return res.status(400).json({ error: 'Recipient, amount, method, and date are required' });
-        if (!['cash', 'bank'].includes(method) || Number(amount) <= 0) return res.status(400).json({ error: 'Enter a valid amount and method' });
-        if (method === 'bank' && !bank_account_id) return res.status(400).json({ error: 'Select the bank account used for this withdrawal' });
-        if (bank_account_id && !(await query("SELECT id FROM cash_bank_accounts WHERE id = $1 AND type = 'bank' AND is_active = 1", [bank_account_id])).rows[0]) return res.status(400).json({ error: 'Selected bank account was not found' });
+        const numericAmount = Number(amount);
+        const accountId = method === 'bank' && bank_account_id ? Number(bank_account_id) : null;
+
+        if (!['Iftekhar Ahmad', 'Shaukat Rang Illahi', 'Bank'].includes(recipient) || !method || !date || !Number.isFinite(numericAmount)) return res.status(400).json({ error: 'Recipient, amount, method, and date are required' });
+        if (!['cash', 'bank'].includes(method) || numericAmount <= 0) return res.status(400).json({ error: 'Enter a valid amount and method' });
+        if (method === 'bank' && (!Number.isInteger(accountId) || accountId <= 0)) return res.status(400).json({ error: 'Select the bank account used for this withdrawal' });
+        if (accountId && !(await query("SELECT id FROM cash_bank_accounts WHERE id = $1 AND type = 'bank' AND is_active = 1", [accountId])).rows[0]) return res.status(400).json({ error: 'Selected bank account was not found' });
         const result = await withTransaction(async (client) => {
-            const inserted = await client.query('INSERT INTO profit_withdrawals (recipient, amount, method, bank_account_id, date, notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [recipient, amount, method, bank_account_id, date, notes]);
-            await AccountingService.updateAccountBalance(method, amount, 'subtract', client, bank_account_id);
+            if (accountId) {
+                const account = (await client.query('SELECT current_balance FROM cash_bank_accounts WHERE id = $1 FOR UPDATE', [accountId])).rows[0];
+                if (!account || Number(account.current_balance) < numericAmount) {
+                    const error = new Error('Insufficient balance in the selected bank account');
+                    error.status = 400;
+                    throw error;
+                }
+            }
+
+            const inserted = await client.query('INSERT INTO profit_withdrawals (recipient, amount, method, bank_account_id, date, notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [recipient, numericAmount, method, accountId, date, notes]);
+            await AccountingService.updateAccountBalance(method, numericAmount, 'subtract', client, accountId);
             return inserted.rows[0];
         });
         res.status(201).json(result);
-    } catch (error) { res.status(500).json({ error: 'Failed to record profit withdrawal' }); }
+    } catch (error) {
+        console.error('Error creating profit withdrawal:', error);
+        res.status(error.status || 500).json({ error: error.status ? error.message : 'Failed to record profit withdrawal', message: error.status ? undefined : error.message });
+    }
 });
 
 router.delete('/:id', async (req, res) => {
