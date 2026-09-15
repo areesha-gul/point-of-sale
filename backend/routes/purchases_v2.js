@@ -16,7 +16,7 @@ const purchaseDetails = `
 router.get('/', async (req, res) => {
     try {
         const params = [];
-        let sql = `${purchaseDetails} WHERE 1 = 1`;
+        let sql = `${purchaseDetails} WHERE p.status <> 'voided'`;
         if (req.query.status) { params.push(req.query.status); sql += ` AND p.status = $${params.length}`; }
         sql += ' ORDER BY p.date DESC, p.id DESC';
         res.json((await query(sql, params)).rows);
@@ -103,15 +103,16 @@ router.delete('/:id', async (req, res) => {
         if (purchase.status === 'draft') { await query('DELETE FROM purchases WHERE id = $1', [req.params.id]); return res.json({ message: 'Draft purchase deleted successfully' }); }
         if (purchase.status !== 'approved') return res.status(400).json({ error: 'Purchase already voided' });
         await withTransaction(async (client) => {
-            await client.query(`UPDATE purchases SET status = 'voided', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [req.params.id]);
             // Reduce product stock - use actual_weight_kg if it was used, otherwise use qty_kg
             const stockToReduce = purchase.actual_weight_kg ? Number(purchase.actual_weight_kg) : Number(purchase.qty_kg);
             await client.query('UPDATE products SET current_stock = current_stock - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [stockToReduce, purchase.product_id]);
             const unpaid = Number(purchase.grand_total) - Number(purchase.amount_paid);
             if (unpaid > 0) await AccountingService.updateVendorBalance(purchase.vendor_id, unpaid, 'subtract', client);
             if (Number(purchase.amount_paid) > 0 && purchase.payment_method !== 'none') await AccountingService.updateAccountBalance(purchase.payment_method === 'cash' ? 'cash' : 'bank', purchase.amount_paid, 'add', client, purchase.bank_account_id);
+            await client.query("DELETE FROM ledger_entries WHERE ref_type = 'purchase' AND ref_id = $1", [req.params.id]);
+            await client.query('DELETE FROM purchases WHERE id = $1', [req.params.id]);
         });
-        res.json({ message: 'Purchase voided successfully' });
+        res.json({ message: 'Purchase deleted and balances restored' });
     } catch (error) { res.status(500).json({ error: 'Failed to delete purchase' }); }
 });
 

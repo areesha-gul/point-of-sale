@@ -42,14 +42,14 @@ export default function SaleList() {
     const handleDelete = async (id, status) => {
         const confirmMsg = status === 'draft'
             ? 'Delete this draft sale?'
-            : 'Void this sale? This will restore stock and reverse accounting entries.';
+            : 'Delete this sale? Stock, balances, and accounting entries will be reversed.';
         
         if (!confirm(confirmMsg)) return;
         
         setProcessing(id);
         try {
             await salesApi.remove(id);
-            alert(status === 'draft' ? 'Sale deleted!' : 'Sale voided!');
+            alert('Sale deleted and balances restored!');
             loadSales();
         } catch (error) {
             alert('Error deleting sale');
@@ -172,7 +172,7 @@ export default function SaleList() {
                                                     disabled={processing === sale.id}
                                                     className="btn-danger text-sm"
                                                 >
-                                                    Void
+                                                    Delete
                                                 </button>
                                             )}
                                             {sale.status === 'voided' && (

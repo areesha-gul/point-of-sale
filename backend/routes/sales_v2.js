@@ -18,7 +18,7 @@ const saleDetails = `
 router.get('/', async (req, res) => {
     try {
         const params = [];
-        let sql = `${saleDetails} WHERE 1 = 1`;
+        let sql = `${saleDetails} WHERE s.status <> 'voided'`;
         if (req.query.status) {
             params.push(req.query.status);
             sql += ` AND s.status = $${params.length}`;
@@ -118,14 +118,15 @@ router.delete('/:id', async (req, res) => {
         }
         if (sale.status !== 'approved') return res.status(400).json({ error: 'Sale already voided' });
         await withTransaction(async (client) => {
-            await client.query(`UPDATE sales SET status = 'voided', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [req.params.id]);
             // Restore product stock (no avg_cost update needed)
             await client.query('UPDATE products SET current_stock = current_stock + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [sale.qty_kg, sale.product_id]);
             const unpaid = Number(sale.total) - Number(sale.amount_paid);
             if (unpaid > 0) await AccountingService.updateCustomerBalance(sale.customer_id, unpaid, 'subtract', client);
             if (Number(sale.amount_paid) > 0 && sale.payment_method !== 'none') await AccountingService.updateAccountBalance(sale.payment_method === 'cash' ? 'cash' : 'bank', sale.amount_paid, 'subtract', client, sale.bank_account_id);
+            await client.query("DELETE FROM ledger_entries WHERE ref_type = 'sale' AND ref_id = $1", [req.params.id]);
+            await client.query('DELETE FROM sales WHERE id = $1', [req.params.id]);
         });
-        res.json({ message: 'Sale voided successfully' });
+        res.json({ message: 'Sale deleted and balances restored' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete sale' });
     }

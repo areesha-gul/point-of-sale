@@ -42,14 +42,14 @@ export default function PurchaseList() {
     const handleDelete = async (id, status) => {
         const confirmMsg = status === 'draft'
             ? 'Delete this draft purchase?'
-            : 'Void this purchase? This will reverse all accounting entries.';
+            : 'Delete this purchase? Stock, balances, and accounting entries will be reversed.';
         
         if (!confirm(confirmMsg)) return;
         
         setProcessing(id);
         try {
             await purchasesApi.remove(id);
-            alert(status === 'draft' ? 'Purchase deleted!' : 'Purchase voided!');
+            alert('Purchase deleted and balances restored!');
             loadPurchases();
         } catch (error) {
             alert('Error deleting purchase');
@@ -183,7 +183,7 @@ export default function PurchaseList() {
                                                     disabled={processing === purchase.id}
                                                     className="btn-danger text-sm"
                                                 >
-                                                    Void
+                                                    Delete
                                                 </button>
                                             )}
                                             {purchase.status === 'voided' && (
